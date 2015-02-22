@@ -51,6 +51,54 @@ int admission_control (my_process_entry *new_process_entry) {
 	}
 }
 
+/*	Remove task will remove a particular task from the linked list, The task is given by the PID
+	which is trying to deregister as it is done. It outputs 0 if the process can be successfully removed
+	else it returns -1
+
+*/
+
+int remove_task (pid_t pid) {
+	my_process_entry entry_temp;
+	struc list_head *it, *next;
+	mutex_lock(&mymutex);
+	list_for_each_safe(it, next, &mylist) {
+		entry_temp = list_entry(it, my_process_entry, mynode);
+		if(entry_temp->pid == pid) {
+			/* Users can also delete a timer (if it has not expired) through a call to del_timer:
+			   See: http://www.ibm.com/developerworks/library/l-timers-list/
+			   for the details of del_timer
+			*/
+			del_timer(&(entry_temp->mytimer));
+			/* Deleting the pointer pointing to the current task from the linked list */
+			list_del(it);
+			/* Free the temporary my_process_entry */
+			kfree(entry_temp);
+			/* Successfully removed the process and hence unlock the mutex and return 0 */
+			mutex_unlock(&mymutex);
+			return 0;
+		}
+	}
+
+	/* Process cannot be removed successfully. Hence unlock the mutex and return -1 */
+	mutex_unlock(&mymutex);
+	retunr -1;
+}
+
+/* This is the upper half. It will change the process state to READY, reset the process timer and will wake up the bottom
+   half which is the worker thread
+ */
+
+void mytimer_callback(ulong data) {
+/* Neha Divya Aniruddh please write this one */
+}
+
+/* This is the worker thread. Once the PID is passed, it will find the PID in the linked list, will preempt the process,
+   will look for the highest priority process in the list and will schedule it next
+*/
+int workthread(void *data) {
+/* Aniruddh, Neha, Divya please write this one */
+}
+
 static ssize_t procfile_write(struct file *file, const char __user *buffer, size_t count, loff_t *data) {
 	
 	pid_t pid;
@@ -168,10 +216,65 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				return -EFAULT;
 			}
 
+			pid_str = proc_buffer + 2;
+			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
+				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
+				kfree(proc_buffer);
+				return -EFAULT;
+			}
 
+			mutex_lock(&mymutex);
+			/* Find the entry associated with the process with PID which is trying to yield */
+			entry_temp = find_task_by_pid(pid);
+			/* If the process is trying to yield, put it to a UNINTERRUPTABLE SLEEP state as suggested in the 
+			   MP2 doc. Here we use Kernel scheduler to do that. 
+			   We check if the timer is pending that is the task has done with its computation and has some
+			   time quantum left before its current period expires and hence has to sleep before the next invocation
+			*/
+			if(timer_pending(&entry_temp->mytimer)) {
+				set_task_state(entry_temp->task, TASK_UNINTERRUPTIBLE);
+				entry_temp->sparam.sched_priority = 0;
+				sched_setscheduler(entry_temp->task, SCHED_NORMAL, &(entry_temp->sparam));
+				entry_temp->state = SLEEPING;
+			}
+
+			mutex_unlock(&mymutex);
+			/* Our real time schedulling is done. Now call Linux scheduler to schedule everything else 
+			   in the world
+			*/
+			schedule();
+			break;
+
+		case 'D':
+			/* Check if list is empty before deregistration */
+			if(list_empty(&mylist)) {
+				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
+				kfree(proc_buffer);
+				return -EFAULT;
+			}
+			pid_str = proc_buffer + 2;
+			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
+				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
+				kfree(proc_buffer);
+				return -EFAULT;
+			}
+
+			if((ret = remove_task(pid)) == -1) {
+				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
+				kfree(procfs_buffer);
+				return -EFAULT;
+			}
+
+			break;
+
+		deafult:
+			printk(KERN_ALERT "I DONT KNOW WHAT IS HAPPENING. PANICKED :(\n");
+			kfree(proc_buffer);
+			return -EFAULT;
 
 	} /* End of the switch statement*/
-
+	kfree(proc);
+	return count;
 
 }
 
