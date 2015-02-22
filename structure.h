@@ -26,5 +26,13 @@ typedef struct process_entry {
 /* Pointer to the currently running task */
 my_process_entry *entry_currtask=NULL;
 
+typedef struct proc_dir_entry procfs_entry;
+
+procfs_entry *newproc = NULL;
+procfs_entry *newdir = NULL;
+procfs_entry *newentry = NULL;
+
+procfs_entry* proc_filesys_entries(char *procname, char *parent);
+static void remove_entry(char *procname, char *parent);
 /* Admission Control Function Declaration */
 int admission_control (my_process_entry *new_process_entry);

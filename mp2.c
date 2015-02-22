@@ -52,4 +52,86 @@ int admission_control (my_process_entry *new_process_entry) {
 }
 
 
-o
+/* Similar procfile_read function like MP1 */
+
+static ssize_t procfile_read (struct file *file, char __user *buffer, size_t count, loff_t *data) {
+	char *read_buf = NULL;
+	unsigned int buf_size;
+	ulong ret = 0;
+	ssize_t len = count, retVal = 0;
+
+	printk(KERN_INFO "PROCFILE READ /proc/mp2/status CALLED\n");
+	/* I am assuming Aniruddh will provide the buf size again */
+	printk(KERN_INFO "*data = %d, buf_size = %d, count = %ld", (int)(*data), buf_size, count);
+	if(*data >= buf_size) {
+		kfree(read_buf);
+		goto out;
+	}
+
+	if((int)(*data) + count > buf_size) {
+		len = buf_size - (int)(*data);
+	}
+
+
+	if((ret = copy_to_user(buffer, read_buf,buf_size) != 0)) {
+		printk(KERN_INFO "copy to user failed\n");
+		return -EFAULT;
+	}
+	*data += (loff_t)(len - ret);
+	retVal = len - ret;
+	kfree(read_buf);
+	out:
+		return retVal;
+}
+
+static struct file_operations proc_file_op = {
+	.owner 	= THIS_MODULE,
+	.read	= procfile_read,
+	.write	= procfile_write,
+};
+
+procfs_entry* proc_filesys_entries(char *procname, char *parent) {
+
+	newdir = proc_mkdir(parent, NULL);
+	if(newdir == NULL) {
+		printk(KERN_ALERT "ERROR IN DIRECTORY CREATION\n");
+	}
+	else
+		printk(KERN_ALERT "DIRECTORY CREATION SUCCESSFUL");
+	
+	newproc = proc_create(procname, 0666, newdir, &proc_file_op);
+	if(newproc == NULL)
+		printk(KERN_ALERT "ERROR: COULD NOT INITIALIZE /proc/%s/%s\n", parent, procname);
+
+	printk(KERN_INFO "INFO: SUCCESSFULLY INITIALIZED /proc/%s/%s\n", parent, procname);
+	
+	return newproc;
+
+}
+
+static void remove_entry(char *procname, char *parent) {
+	remove_proc_entry(procname, newdir);
+	remove_proc_entry(parent, NULL);
+}
+
+
+
+static int __mp2_init(void) {
+	printk("MP2 MODULE LOADING");
+	printk("MODULE INIT CALLED");
+	newentry = proc_filesystem_entries("status", "MP2");
+
+	printk("MP2 MODULE LOADED");
+	return 0;
+}
+
+static void __exit mp1_exit(void) {
+	printk("MP2 MODULE UNLOADING");
+	remove_entry("status", "mp2");
+	printk("MP2 MODULE UNLOADED");
+}
+
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Group_2");
+MODULE_DESCRIPTION("CS-423_MP2");
