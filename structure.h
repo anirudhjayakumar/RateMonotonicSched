@@ -7,6 +7,8 @@ enum states {
 typedef unsigned long ulong;
 typedef struct list_head list_node;
 
+ulong initial_jiffies, curr_jiffies;
+
 /* Creating mutex lock to protect data structures when they are read or written */
 struct mutex mymutex;
 

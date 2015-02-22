@@ -51,6 +51,133 @@ int admission_control (my_process_entry *new_process_entry) {
 	}
 }
 
+static ssize_t procfile_write(struct file *file, const char __user *buffer, size_t count, loff_t *data) {
+	
+	pid_t pid;
+	char *proc_buffer;
+	char *pid_str = NULL, *period_str = NULL, *computation_str = NULL, *end;
+	new_process_entry *entry_temp;
+	ulong ret = 0;
+
+	proc_buffer = (char *)kmalloc(count, GFP_KERNEL);
+	if(copt_from_user(proc_buffer, bufferm count)) {
+		kfree(proc_buffer);
+		return -EFAULT;
+	}
+	proc_buffer[count] = '\0';
+	/* 	Handle differnt cases of the process through the proc file system
+		R : Case for new process trying to register
+		Y : Case for a process yielding
+		D : Case for a process done with computing and going to deregister
+	*/
+	switch(proc_buffer[0]) {
+		case 'R':
+
+			/* Changing all commas to null terminated strings and storing them. */
+			proc_buffer[count] = '\0';
+			pid_str = procfs_buffer + 2;
+			end = strstr(procfs_buffer + 2, ",");
+			*end = '\0';
+			period_str = end + 1;
+			end = strstr(procfs_buffer + 2, ",");
+			*end = '\0';
+			computation_str = end + 1;
+			
+			/* Creating a temporary entry in kernel space to hold the new requesting process */
+			entry_temp = (my_process_entry *)kmalloc(sizeof(my_process_entry), GFP_KERNEL);
+			/*
+				kstrtoul : Convert a string to an unsigned long
+				int kstrtoul ( 	const char *s,
+						unsigned int base,
+						unsigned long *res);
+				s: The start of the string and it must be null terminated.
+				base:  The number base to use
+				res: Where to write the result after conversion is over
+			*/
+			if((ret = kstrtoul(pid_str, 10, &(entry_temp->pid))) == -1) { 
+				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
+				kfree(proc_buffer);
+				kfree(entry_temp);
+				return -EFAULT;
+			}
+			if((ret = kstrtoul(period_str, 10, &(entry_temp->period))) == -1) {
+				PRINTK(KERN_ALERT "ERROR IN PERIOD TO STRING CONVERSION\n");
+				kfree(proc_buffer);
+				kfree(entry_temp);
+				return -EFAULT;
+			}
+			if((ret - kstrtoul(computation_str, 10, &(entry_temp->computation))) == -1) {
+				printk(KERN_ALERT "ERROR IN COMPUTATION TO STRING CONVERSION\n");
+				kfree(proc_buffer);
+				kfree(entry_temp);
+				return -EFAULT;
+			}
+		
+			/* If every conversion success print the details in the kernel log for debugging purpose */
+			printk(KERN_INFO "Registering Process PID = %lu, PERIOD = %lu, COMPUTATION = %lu\n", entry_temp->pid, entry_temp->period, entry_temp->computation);
+		
+			/* Call Admission Control function now to see if the new process can be registered */
+			if(admission_control(entry_temp) == -1) {
+				printk(KERN_ALRERT "DENIED REGISTRATION OF PID = %lu", entry_temp->pid);
+				kfree(entry_temp);
+				kfree(proc_buffer);
+				return -EFAULT;
+			}
+		
+			/* If we can register the process, then we have to check the time of registration */
+			curr_jiffies = jiffies;
+			printk(KERN_INFO "PROCESS PID = %lu REGISTERED: %lu\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+
+			/* We directly dont modify the process control block or PCB of the newly admitted process rather we keep a pointer 
+			   to the PCB of the newly admitted process as suggested in the MP doc. We use the find_task_by_pid() function provided
+			   in th emp2_given.h file for this purpose.
+			*/
+			entry_temp->task = find_task_by_pid(entry_temp->pid);
+			/* Once the pointer to PCB found, initialize the timer associated with the process 
+			   See: http://www.ibm.com/developerworks/library/l-timers-list/
+			   for setup_timer details
+			*/
+			setup_timer(&(entry_temp->mytimer), &mytimer_callback, (ulong)entry_temp);
+			/* With an initialized timer, the user now needs to set the expiration time, which is done through a 
+			   call to mod_timer. As users commonly provide an expiration in the future, 
+			   they typically add jiffies here to offset from the current time.
+			   See: http://www.ibm.com/developerworks/library/l-timers-list/
+			   for mod_timer_details
+			*/
+			ret = mod_timer(&(entry_temp->mytimer), jiffies + msecs_to_jiffies(entry_temp->period - entry_temp->computation));
+			/* Finally, users can determine whether the timer is pending (yet to fire) through a 
+			   call to timer_pending (1 is returned if the timer is pending):
+			   See: http://www.ibm.com/developerworks/library/l-timers-list/
+			   for timer_pending details
+			*/
+			if(ret) {
+				printk(KERN_ALERT "ERROR IN SET TIMER\n");
+				printk(KERN_ALERT "TIMER PENDING IS: %lu\n", timer_pending(&(entry_temp->mytimer)));
+			}
+			entry_temp->state = SLEEPING; /* Set the process state to SLEEP and then add it to the process list */
+			mutex_lock(&mymutex);
+			list_add_tail(&(entry_temp->mynode), &mylist);
+			mutex_unlock(&mymutex);
+
+			break;
+		case 'Y':
+			/* Check if list is empty before yielding */
+			if(list_empty(&mylist)) {
+				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
+				kfree(proc_buffer);
+				return -EFAULT;
+			}
+
+
+
+	} /* End of the switch statement*/
+
+
+}
+
+
+
+
 
 /* Similar procfile_read function like MP1 */
 
