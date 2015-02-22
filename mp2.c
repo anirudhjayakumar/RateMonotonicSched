@@ -20,3 +20,36 @@
 
 #include "mp2_given.h"
 #includd "structure.h"		/* Defining the state enum and the process control block structures */
+
+
+/* 	Admission control makes sure that the new process which is trying to register can be accmodated
+	given the present utilization of the CPU. If the new utilization is less than ln 2 or 0.693, 
+	the new process gets admitted else its registration is denied.
+*/
+
+int admission_control (my_process_entry *new_process_entry) {
+	ulong utilization = 0;
+	my_process_entry *entry_temp;
+	struct list_head *it, *next;
+	/* Since floating point calculation is costly, we multiply by 1000 to make it an integer */
+	utilization = (new_process_entry->computation)*1000 / (new_process_entry->period);
+
+	mutex_lock(mymutex);
+	/* Now go through the whole linked list and sum up the utilization ratio of the current
+	   registered processes and the new process */
+	list_for_each_safe(it, next, &mylist) {
+		entry_temp = list_entry(it, my_process_entry, mynode);
+		utilization = utilization + (entry_temp->computation)*1000/ (entry_temp->period);
+	}
+	mutex_unlock(&mymutex);
+	printk(KERN_INFO "Utilization Sum: %lu", utilization);
+	if(utilization <= 693) {
+		return 0;
+	}
+	else {
+		return -1;
+	}
+}
+
+
+o

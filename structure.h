@@ -7,6 +7,9 @@ enum states {
 typedef unsigned long ulong;
 typedef struct list_head list_node;
 
+/* Creating mutex lock to protect data structures when they are read or written */
+struct mutex mymutex;
+
 typedef struct process_entry {
 	/* Data Structure elements */		/* Data Strcuture element explnation */
 	pid_t pid;				// Process ID
@@ -23,3 +26,5 @@ typedef struct process_entry {
 /* Pointer to the currently running task */
 my_process_entry *entry_currtask=NULL;
 
+/* Admission Control Function Declaration */
+int admission_control (my_process_entry *new_process_entry);
