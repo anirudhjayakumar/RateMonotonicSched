@@ -273,7 +273,7 @@ static ssize_t procfile_read (struct file *file, char __user *buffer, size_t cou
 	ssize_t len = count, retVal = 0;
 
 	printk(KERN_INFO "PROCFILE READ /proc/mp2/status CALLED\n");
-	/* I am assuming Aniruddh will provide the buf size again */
+	ll_generate_proc_info_string(&read_buf,&buf_size);
 	printk(KERN_INFO "*data = %d, buf_size = %d, count = %ld", (int)(*data), buf_size, count);
 	if(*data >= buf_size) {
 		kfree(read_buf);
