@@ -82,11 +82,13 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 	my_process_entry *entry_temp;
 	ulong ret = 0;
 
-	proc_buffer = (char *)kmalloc(count, GFP_KERNEL);
+	/* Calling process passes the PID in the string format */
+	proc_buffer = (char *)kmalloc(count + 1, GFP_KERNEL);
 	if(copy_from_user(proc_buffer, buffer, count)) {
 		kfree(proc_buffer);
 		return -EFAULT;
 	}
+	/* Terminate with a NULL charecter to make it a C string */
 	proc_buffer[count] = '\0';
 	/* 	Handle differnt cases of the process through the proc file system
 		R : Case for new process trying to register
@@ -97,7 +99,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 		case 'R':
 
 			/* Changing all commas to null terminated strings and storing them. */
-			proc_buffer[count] = '\0';
+			
 			pid_str = proc_buffer + 2;
 			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
@@ -137,7 +139,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			}
 		
 			/* If every conversion success print the details in the kernel log for debugging purpose */
-			printk(KERN_INFO "Registering Process PID = %lu, PERIOD = %lu, COMPUTATION = %lu\n", entry_temp->pid, entry_temp->period, entry_temp->computation);
+			#ifdef __DEBUG__
+			curr_jiffies = jiffies;
+			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %lu, PERIOD =  
+%lu, COMPUTATION = %lu\n at %lu us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
+jiffies_to_usecs(curr_jiffies));
+			#endif
 		
 			/* Call Admission Control function now to see if the new process can be registered */
 			if(admission_control(entry_temp) == -1) {
@@ -148,12 +155,15 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			}
 		
 			/* If we can register the process, then we have to check the time of registration */
+			#ifdef __DEBUG__
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "PROCESS PID = %lu REGISTERED: %lu\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler registering PROCESS PID = %lu REGISTERED at %lu us\n", 
+entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			#endif
 
 			/* We directly dont modify the process control block or PCB of the newly admitted process rather we keep a pointer 
 			   to the PCB of the newly admitted process as suggested in the MP doc. We use the find_task_by_pid() function provided
-			   in th emp2_given.h file for this purpose.
+			   in the mp2_given.h file for this purpose.
 			*/
 			entry_temp->task = find_task_by_pid(entry_temp->pid);
 			/* Once the pointer to PCB found, initialize the timer associated with the process 
@@ -181,10 +191,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			entry_temp->state = SLEEPING; /* Set the process state to SLEEP and then add it to the process list */
 			
 			ll_add_task(entry_temp);
-            //remove this
-			/*mutex_lock(&mymutex);
-			list_add_tail(&(entry_temp->mynode), &mylist);
-			mutex_unlock(&mymutex);*/
+            
 
 			break;
 		case 'Y':
@@ -201,8 +208,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				kfree(proc_buffer);
 				return -EFAULT;
 			}
-
-			mutex_lock(&mymutex);
+			#ifdef __DEBUG__
+			curr_jiffies = jiffies;
+			printk(KERN_INFO "RMS Scheduler get the information Process PID: %lu finished computation at 
+%lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			#endif
+			
 			/* Find the entry associated with the process with PID which is trying to yield */
 			
 			ll_get_task(pid,&entry_temp);
@@ -214,10 +225,16 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			   time quantum left before its current period expires and hence has to sleep before the next invocation
 			*/
 			if(timer_pending(&entry_temp->mytimer)) {
+				#ifdef __DEBUG__
+				curr_jiffies = jiffies;
+				printk(KERN_INFO "RMS Scheduler putting the Process PID: %lu to sleep at %lu 
+us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+				#endif
 				set_task_state(entry_temp->task, TASK_UNINTERRUPTIBLE);
 				entry_temp->sparam.sched_priority = 0;
 				sched_setscheduler(entry_temp->task, SCHED_NORMAL, &(entry_temp->sparam));
 				entry_temp->state = SLEEPING;
+				entry_currtask = NULL;
 			}
 
 			mutex_unlock(&mymutex);
@@ -241,7 +258,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				return -EFAULT;
 			}
 
-			if((ret = ll_remove_task(pid)) == -1) {
+			#ifdef __DEBUG__
+			curr_jiffies = jiffies;
+			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", entry_temp->pid, 
+jiffies_to_usecs(curr_jiffies));
+			#endif
+			if((ret = remove_task(pid)) == -1) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -334,6 +356,10 @@ static int __mp2_init(void) {
 	newentry = proc_filesys_entries("status", "MP2");
     
 	ll_initialize_list(); 
+	#ifdef __DEBUG__
+	curr_jiffies = jiffies;
+	printk(KERN_INFO "RMS Scheduler loaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
+	#endif
 	printk("MP2 MODULE LOADED");
 	return 0;
 }
@@ -342,6 +368,10 @@ static void __exit mp1_exit(void) {
 	printk("MP2 MODULE UNLOADING");
 	remove_entry("status", "mp2");
 	ll_cleanup();
+	#ifdef __DEBUG__
+	curr_jiffies = jiffies;
+	printk(KERN_INFO "RMS Scheduler unloaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
+	#endif
 	printk("MP2 MODULE UNLOADED");
 }
 
