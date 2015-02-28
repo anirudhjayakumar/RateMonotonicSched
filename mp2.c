@@ -263,7 +263,7 @@ us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", entry_temp->pid, 
 jiffies_to_usecs(curr_jiffies));
 			#endif
-			if((ret = remove_task(pid)) == -1) {
+			if(ll_remove_task(pid) != SUCCESS) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
 				kfree(proc_buffer);
 				return -EFAULT;
