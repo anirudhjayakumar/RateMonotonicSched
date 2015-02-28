@@ -356,6 +356,7 @@ static int __mp2_init(void) {
 	newentry = proc_filesys_entries("status", "MP2");
     
 	ll_initialize_list(); 
+	thread_init();
 	#ifdef __DEBUG__
 	curr_jiffies = jiffies;
 	printk(KERN_INFO "RMS Scheduler loaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
@@ -367,6 +368,7 @@ static int __mp2_init(void) {
 static void __exit mp1_exit(void) {
 	printk("MP2 MODULE UNLOADING");
 	remove_entry("status", "mp2");
+	thread_cleanup();
 	ll_cleanup();
 	#ifdef __DEBUG__
 	curr_jiffies = jiffies;
