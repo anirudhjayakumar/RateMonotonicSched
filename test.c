@@ -1,0 +1,156 @@
+#include <stdio.h>
+#include <sys/unistd.h>
+#include <sys/types.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <strings.h>
+#include <errno.h>
+#include <sys/time.h>
+#include <string.h>
+
+void myregister(pid_t pid, uint32_t period, uint32_t computation, char *file)
+{
+	FILE *fp=fopen(file,"w");
+	int ret;
+
+	printf("R,pid=%lu,period=%lu,compu=%lu\n",pid,period,computation);
+	ret=fprintf(fp,"R,%lu,%lu,%lu",pid,period,computation);
+	fclose(fp);
+}
+
+int read_status(char *file)
+{
+	int ret, filenum, i;
+	unsigned long pid, period, comp;	// dummy variables
+	pid_t mypid = getpid();
+	char buffer[512];
+	char* checker = buffer;
+	bzero(buffer, 512);
+	//char *comma,*tmp;
+	//unsigned long pid_tmp;
+
+	FILE *fp = fopen(file, "r");
+
+	if(fp == NULL)
+		return -1;
+		
+	//since the buffer returns nicely, make the
+	//read function return the number of process
+	//in the scheduler so we know what to parse
+	ret = fread(buffer,sizeof(char),500,fp);
+	fclose(fp);
+
+	printf("address of buffer is %p\n",buffer);
+	printf("the read is: %s\n", buffer);
+	printf("numbytes is: %d\n", ret);
+
+	/*tmp=buffer;
+	do{
+		comma=strstr(tmp,",");
+		*comma='\0';
+		pid_tmp=atol(tmp);
+		if(pid_tmp==pid)
+			return 1;
+		tmp=strstr(comma+1,"\n")+1;
+
+	}while(comma-buffer<=ret);*/
+	//check if the process is in the list, if so return ret, else return 0
+	while(*checker != '\0' && (checker - buffer < sizeof(buffer)))
+	{
+
+		sscanf(checker, "%6lu,%6lu,%6lu\n", &pid, &period, &comp);
+		printf("CHECK: %lu, %lu, %lu\n", pid, period, comp);
+		//printf("mypid:%lu\n", mypid);
+		
+		if(pid == mypid)
+			return ret;
+	
+		//size of each entry will be 7*4 = 
+		//(sizeof(unsigned long) + 1 comma/newline) * number of fields
+		checker += 21;	
+	}
+
+	printf("REGISTRATION DENIED\n");	
+	return 0;
+}
+
+unsigned long factorial(unsigned long i)
+{
+	unsigned long j,fac=1;
+	for(j=2;j<=i;j++)
+		fac*=j;
+	return fac;
+}
+
+void visible_test_sleep(unsigned long i)
+{
+	unsigned long count;
+
+	for(count = 0; count < i; count++)
+		printf("%ld\n", count);
+}
+
+void yield(pid_t pid,char *file)
+{
+	FILE *fp=fopen(file,"w");
+	fprintf(fp,"Y,%lu",pid);
+	fclose(fp);
+}
+
+void unregister(pid_t pid, char *file)
+{
+	FILE *fp=fopen(file,"w");
+	fprintf(fp,"D,%lu",pid);
+	fclose(fp);
+}
+
+
+int main()
+{
+
+	char *file="/proc/mp2/status";
+	uint32_t period=10000, computation=10, pid;
+	int reg_success;
+	unsigned long i, jobs = 2;
+	unsigned int ret;
+	char buf[1000];
+	struct timeval t0, current;
+
+	pid=getpid();
+	myregister(pid,period,computation,file);
+
+	reg_success=read_status(file);
+	
+	if(!reg_success)
+		exit(1);
+
+	//get the time of day
+	gettimeofday(&t0, NULL);
+
+	yield(pid,file);
+	for(i=0;i<jobs;i++){
+
+		printf("\npid %d running %lu times\n",pid,i);
+		//get the time of day
+		gettimeofday(&current, NULL);
+		printf("currently running for: %ld seconds, %ld miliseconds\n", 
+			current.tv_sec - t0.tv_sec, 
+			((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000);
+
+		//factorial(100000);
+		//visible_test_sleep(1000000);
+		yield(pid,file);
+	}
+
+	printf("\npid %d running %lu times\n",pid,i);
+	//get the time of day
+	gettimeofday(&current, NULL);
+	printf("currently running for: %ld seconds, %ld miliseconds\n", 
+		current.tv_sec - t0.tv_sec, 
+		((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000);
+	
+	printf("done2");
+	unregister(pid,file);
+	return 0;
+
+}

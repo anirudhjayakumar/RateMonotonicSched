@@ -8,7 +8,7 @@ RM:=rm
 
 .PHONY : clean
 
-all: clean modules app
+all: clean modules my_factorial factorial test hi_priority visual
 
 obj-m += mp2_final.o
 mp2_final-objs := linklist.o thread.o mp2.o
@@ -16,8 +16,20 @@ mp2_final-objs := linklist.o thread.o mp2.o
 modules:
 	$(MAKE) -C $(KERNEL_SRC) M=$(SUBDIR) modules
 
-app: my_factorial.c my_factorial.h
-	$(GCC) -o my_factorial my_factorial.c
+my_factorial: my_factorial.c my_factorial.h
+	$(GCC) -o $@ $^ -g -O0
+
+factorial: factorial.c
+	$(GCC) -o $@ $^ -g -O0
+
+test: test.c
+	$(GCC) -o $@ $^ -g -O0
+
+hi_priority: hi_priority.c
+	$(GCC) -o $@ $^ -g -O0
+	
+visual: visual_proc.c
+	$(GCC) -o $@ $^ -g -O0
 
 clean:
 	$(RM) -f my_factorial *~ *.ko *.o *.mod.c Module.symvers modules.order
