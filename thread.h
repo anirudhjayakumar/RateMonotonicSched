@@ -5,5 +5,4 @@ int thread_init (void);
 
 /*this function is used to clean dispatching thread*/
 void thread_cleanup(void);
-
-
+int wake_thread(void);

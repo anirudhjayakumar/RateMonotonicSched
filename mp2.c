@@ -21,7 +21,7 @@
 #include "mp2_given.h"
 #include "structure.h"		/* Defining the state enum and the process control block structures */
 #include "linklist.h"
-
+#include "thread.h"
 // global variables
 ulong initial_jiffies, curr_jiffies;
 /* Creating mutex lock to protect data structures when they are read or written */
@@ -31,11 +31,6 @@ my_process_entry *entry_currtask=NULL;
 procfs_entry *newproc = NULL;
 procfs_entry *newdir = NULL;
 procfs_entry *newentry = NULL;
-
-
-
-
-
 
 /* 	Admission control makes sure that the new process which is trying to register can be accmodated
 	given the present utilization of the CPU. If the new utilization is less than ln 2 or 0.693, 
@@ -65,42 +60,6 @@ int admission_control (my_process_entry *new_process_entry) {
 	}
 }
 
-/*	Remove task will remove a particular task from the linked list, The task is given by the PID
-	which is trying to deregister as it is done. It outputs 0 if the process can be successfully removed
-	else it returns -1
-
-*/
-
-//remove code
-#if 0
-int remove_task (pid_t pid) {
-	my_process_entry entry_temp;
-	struct list_head *it, *next;
-	mutex_lock(&mymutex);
-	list_for_each_safe(it, next, &mylist) {
-		entry_temp = list_entry(it, my_process_entry, mynode);
-		if(entry_temp->pid == pid) {
-			/* Users can also delete a timer (if it has not expired) through a call to del_timer:
-			   See: http://www.ibm.com/developerworks/library/l-timers-list/
-			   for the details of del_timer
-			*/
-			del_timer(&(entry_temp->mytimer));
-			/* Deleting the pointer pointing to the current task from the linked list */
-			list_del(it);
-			/* Free the temporary my_process_entry */
-			kfree(entry_temp);
-			/* Successfully removed the process and hence unlock the mutex and return 0 */
-			mutex_unlock(&mymutex);
-			return 0;
-		}
-	}
-
-	/* Process cannot be removed successfully. Hence unlock the mutex and return -1 */
-	mutex_unlock(&mymutex);
-	retunr -1;
-}
-#endif
-
 
 /* This is the upper half. It will change the process state to READY, reset the process timer and will wake up the bottom
    half which is the worker thread
@@ -112,13 +71,7 @@ void mytimer_callback(ulong data)
 	// set the process to READY state
 	proc_entry->state = READY;
 	// wake up the dispatch thread 
-}
-
-/* This is the worker thread. Once the PID is passed, it will find the PID in the linked list, will preempt the process,
-   will look for the highest priority process in the list and will schedule it next
-*/
-int workthread(void *data) {
-/* Aniruddh, Neha, Divya please write this one */
+	wake_thread();
 }
 
 static ssize_t procfile_write(struct file *file, const char __user *buffer, size_t count, loff_t *data) {
@@ -251,7 +204,10 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 
 			mutex_lock(&mymutex);
 			/* Find the entry associated with the process with PID which is trying to yield */
-			struct task_struct* kernel_proc_entry = find_task_by_pid(pid);
+			
+			ll_get_task(pid,&entry_temp);
+			
+			
 			/* If the process is trying to yield, put it to a UNINTERRUPTABLE SLEEP state as suggested in the 
 			   MP2 doc. Here we use Kernel scheduler to do that. 
 			   We check if the timer is pending that is the task has done with its computation and has some

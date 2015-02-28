@@ -9,7 +9,7 @@
 //mutex lock for accessing the list
 
 //the dispatching thread
-static struct task_struct *thread;
+static struct task_struct *disp_thread;
 
 //the current running task
 extern my_process_entry *running; //defined in mp2.c
@@ -53,6 +53,7 @@ int thread_callback(void* data) {
 			wake_up_process(node);
 			node->sparam.sched_priority = 99;
 			sched_setscheduler(node->pid,SCHED_FIFO,&(node->sparam));	//scheduling policy make a check
+			running = node;
 		}
 	}	
 	return 0;
@@ -63,7 +64,7 @@ int thread_init (void) {
 	printk(KERN_INFO "in init");
 	
 	//creates a dispatching thread
-	thread = kthread_create(thread_callback,NULL,"thread");	
+	disp_thread = kthread_create(thread_callback,NULL,"disp_thread");	
         return 0;
 }
 
@@ -72,8 +73,13 @@ void thread_cleanup(void) {
 	int ret;
 	
 	//to stop the dispatching thread
-	ret = kthread_stop(thread);
+	ret = kthread_stop(disp_thread);
 	if(!ret)
 	printk(KERN_INFO "Thread stopped");
 }
 
+int wake_thread(void)
+{
+	wake_up_process(disp_thread);
+	return SUCCESS; 
+}

@@ -10,7 +10,6 @@ enum States {
 };
 
 typedef unsigned long ulong;
-typedef struct list_head list_node;
 
 
 typedef struct process_entry {
@@ -23,7 +22,7 @@ typedef struct process_entry {
 	struct sched_param sparam;		// Scheduling parameter of the process
 	struct timer_list mytimer;		// Timer for wakingup
 	struct task_struct *task;		// Linux task pointer
-	list_node mynode;
+	struct list_head list;
 } my_process_entry;
 
 typedef struct proc_dir_entry procfs_entry;
