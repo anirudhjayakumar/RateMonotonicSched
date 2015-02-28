@@ -1,8 +1,11 @@
+#ifndef STRUCTURE_H
+#define STRUCTURE_H
+
 enum states {
 	SLEEPING,	// 0
 	READY,		// 1
 	RUNNING,	// 2
-}
+};
 
 typedef unsigned long ulong;
 typedef struct list_head list_node;
@@ -17,8 +20,8 @@ typedef struct process_entry {
 	pid_t pid;				// Process ID
 	ulong period;				// Period of the process
 	ulong computation;			// Computation time of process
-	ulong c;
-	enum state states;			// States of operation of the process coming from enum
+	ulong c;                // Question: What is this for?
+	states state;			// States of operation of the process coming from enum
 	struct sched_param sparam;		// Scheduling parameter of the process
 	struct timer_list mytimer;		// Timer for wakingup
 	struct task_struct *task;		// Linux task pointer
@@ -44,3 +47,5 @@ int remove_task(pid_t pid);
 void mytimer_callback(ulong data);
 /* Worker thread to preempt the lower priority process and to execute the higher priority task */
 int workthread(void *data);
+
+#endif // STRUCTURE_H

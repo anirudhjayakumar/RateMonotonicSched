@@ -19,8 +19,8 @@
 #include <linux/slab.h>		/* Useful for memory allocation using SLAB APIs */
 
 #include "mp2_given.h"
-#includd "structure.h"		/* Defining the state enum and the process control block structures */
-
+#include "structure.h"		/* Defining the state enum and the process control block structures */
+#include ""
 
 /* 	Admission control makes sure that the new process which is trying to register can be accmodated
 	given the present utilization of the CPU. If the new utilization is less than ln 2 or 0.693, 
@@ -33,15 +33,14 @@ int admission_control (my_process_entry *new_process_entry) {
 	struct list_head *it, *next;
 	/* Since floating point calculation is costly, we multiply by 1000 to make it an integer */
 	utilization = (new_process_entry->computation)*1000 / (new_process_entry->period);
+    utilization += ll_get_curr_utilization();
+    
 
-	mutex_lock(mymutex);
-	/* Now go through the whole linked list and sum up the utilization ratio of the current
-	   registered processes and the new process */
-	list_for_each_safe(it, next, &mylist) {
+	   // remove below:
+	/*list_for_each_safe(it, next, &mylist) {
 		entry_temp = list_entry(it, my_process_entry, mynode);
 		utilization = utilization + (entry_temp->computation)*1000/ (entry_temp->period);
-	}
-	mutex_unlock(&mymutex);
+	}*/
 	printk(KERN_INFO "Utilization Sum: %lu", utilization);
 	if(utilization <= 693) {
 		return 0;
@@ -57,9 +56,11 @@ int admission_control (my_process_entry *new_process_entry) {
 
 */
 
+//remove code
+
 int remove_task (pid_t pid) {
 	my_process_entry entry_temp;
-	struc list_head *it, *next;
+	struct list_head *it, *next;
 	mutex_lock(&mymutex);
 	list_for_each_safe(it, next, &mylist) {
 		entry_temp = list_entry(it, my_process_entry, mynode);
@@ -88,8 +89,12 @@ int remove_task (pid_t pid) {
    half which is the worker thread
  */
 
-void mytimer_callback(ulong data) {
-/* Neha Divya Aniruddh please write this one */
+void mytimer_callback(ulong data) 
+{
+    my_process_entry *proc_entry = (my_process_entry*)data;
+	// set the process to READY state
+	proc_entry->state = READY;
+	// wake up the dispatch thread 
 }
 
 /* This is the worker thread. Once the PID is passed, it will find the PID in the linked list, will preempt the process,
@@ -185,7 +190,8 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			   See: http://www.ibm.com/developerworks/library/l-timers-list/
 			   for setup_timer details
 			*/
-			setup_timer(&(entry_temp->mytimer), &mytimer_callback, (ulong)entry_temp);
+			setup_timer(&(entry_temp->mytimer), &mytimer_callback, (ulong)entry_temp); 
+			//casting pointer to ulong is a safe operation refer:http://www.makelinux.net/ldd3/chp-7-sect-4
 			/* With an initialized timer, the user now needs to set the expiration time, which is done through a 
 			   call to mod_timer. As users commonly provide an expiration in the future, 
 			   they typically add jiffies here to offset from the current time.
@@ -203,14 +209,17 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				printk(KERN_ALERT "TIMER PENDING IS: %lu\n", timer_pending(&(entry_temp->mytimer)));
 			}
 			entry_temp->state = SLEEPING; /* Set the process state to SLEEP and then add it to the process list */
-			mutex_lock(&mymutex);
+			
+			ll_add_task(entry_temp);
+            //remove this
+			/*mutex_lock(&mymutex);
 			list_add_tail(&(entry_temp->mynode), &mylist);
-			mutex_unlock(&mymutex);
+			mutex_unlock(&mymutex);*/
 
 			break;
 		case 'Y':
 			/* Check if list is empty before yielding */
-			if(list_empty(&mylist)) {
+			if(ll_get_size() == 0) {
 				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -225,7 +234,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 
 			mutex_lock(&mymutex);
 			/* Find the entry associated with the process with PID which is trying to yield */
-			entry_temp = find_task_by_pid(pid);
+			struct task_struct* kernel_proc_entry = find_task_by_pid(pid);
 			/* If the process is trying to yield, put it to a UNINTERRUPTABLE SLEEP state as suggested in the 
 			   MP2 doc. Here we use Kernel scheduler to do that. 
 			   We check if the timer is pending that is the task has done with its computation and has some
@@ -247,7 +256,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 
 		case 'D':
 			/* Check if list is empty before deregistration */
-			if(list_empty(&mylist)) {
+			if(ll_get_size() == 0) {
 				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -259,7 +268,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				return -EFAULT;
 			}
 
-			if((ret = remove_task(pid)) == -1) {
+			if((ret = ll_remove_proc(pid)) == -1) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
 				kfree(procfs_buffer);
 				return -EFAULT;
@@ -350,7 +359,8 @@ static int __mp2_init(void) {
 	printk("MP2 MODULE LOADING");
 	printk("MODULE INIT CALLED");
 	newentry = proc_filesystem_entries("status", "MP2");
-
+    
+	ll_initialize_list(); 
 	printk("MP2 MODULE LOADED");
 	return 0;
 }
@@ -358,6 +368,7 @@ static int __mp2_init(void) {
 static void __exit mp1_exit(void) {
 	printk("MP2 MODULE UNLOADING");
 	remove_entry("status", "mp2");
+	ll_cleanup();
 	printk("MP2 MODULE UNLOADED");
 }
 
