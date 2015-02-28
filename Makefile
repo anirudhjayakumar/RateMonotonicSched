@@ -11,7 +11,7 @@ RM:=rm
 all: clean modules app
 
 obj-m += mp2_final.o
-mp2_final-objs := mp2.o
+mp2_final-objs := linklist.o thread.o mp2.o
 
 modules:
 	$(MAKE) -C $(KERNEL_SRC) M=$(SUBDIR) modules

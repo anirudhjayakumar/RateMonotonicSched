@@ -20,7 +20,22 @@
 
 #include "mp2_given.h"
 #include "structure.h"		/* Defining the state enum and the process control block structures */
-#include ""
+#include "linklist.h"
+
+// global variables
+ulong initial_jiffies, curr_jiffies;
+/* Creating mutex lock to protect data structures when they are read or written */
+struct mutex mymutex;
+/* Pointer to the currently running task */
+my_process_entry *entry_currtask=NULL;
+procfs_entry *newproc = NULL;
+procfs_entry *newdir = NULL;
+procfs_entry *newentry = NULL;
+
+
+
+
+
 
 /* 	Admission control makes sure that the new process which is trying to register can be accmodated
 	given the present utilization of the CPU. If the new utilization is less than ln 2 or 0.693, 
@@ -57,7 +72,7 @@ int admission_control (my_process_entry *new_process_entry) {
 */
 
 //remove code
-
+#if 0
 int remove_task (pid_t pid) {
 	my_process_entry entry_temp;
 	struct list_head *it, *next;
@@ -84,6 +99,8 @@ int remove_task (pid_t pid) {
 	mutex_unlock(&mymutex);
 	retunr -1;
 }
+#endif
+
 
 /* This is the upper half. It will change the process state to READY, reset the process timer and will wake up the bottom
    half which is the worker thread
@@ -109,11 +126,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 	pid_t pid;
 	char *proc_buffer;
 	char *pid_str = NULL, *period_str = NULL, *computation_str = NULL, *end;
-	new_process_entry *entry_temp;
+	my_process_entry *entry_temp;
 	ulong ret = 0;
 
 	proc_buffer = (char *)kmalloc(count, GFP_KERNEL);
-	if(copt_from_user(proc_buffer, bufferm count)) {
+	if(copy_from_user(proc_buffer, buffer, count)) {
 		kfree(proc_buffer);
 		return -EFAULT;
 	}
@@ -128,11 +145,11 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 
 			/* Changing all commas to null terminated strings and storing them. */
 			proc_buffer[count] = '\0';
-			pid_str = procfs_buffer + 2;
-			end = strstr(procfs_buffer + 2, ",");
+			pid_str = proc_buffer + 2;
+			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
 			period_str = end + 1;
-			end = strstr(procfs_buffer + 2, ",");
+			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
 			computation_str = end + 1;
 			
@@ -154,7 +171,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				return -EFAULT;
 			}
 			if((ret = kstrtoul(period_str, 10, &(entry_temp->period))) == -1) {
-				PRINTK(KERN_ALERT "ERROR IN PERIOD TO STRING CONVERSION\n");
+				printk(KERN_ALERT "ERROR IN PERIOD TO STRING CONVERSION\n");
 				kfree(proc_buffer);
 				kfree(entry_temp);
 				return -EFAULT;
@@ -171,7 +188,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 		
 			/* Call Admission Control function now to see if the new process can be registered */
 			if(admission_control(entry_temp) == -1) {
-				printk(KERN_ALRERT "DENIED REGISTRATION OF PID = %lu", entry_temp->pid);
+				printk(KERN_ALERT "DENIED REGISTRATION OF PID = %lu", entry_temp->pid);
 				kfree(entry_temp);
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -268,9 +285,9 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				return -EFAULT;
 			}
 
-			if((ret = ll_remove_proc(pid)) == -1) {
+			if((ret = ll_remove_task(pid)) == -1) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
-				kfree(procfs_buffer);
+				kfree(proc_buffer);
 				return -EFAULT;
 			}
 
@@ -282,7 +299,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			return -EFAULT;
 
 	} /* End of the switch statement*/
-	kfree(proc);
+	kfree(proc_buffer);
 	return count;
 
 }
@@ -358,7 +375,7 @@ static void remove_entry(char *procname, char *parent) {
 static int __mp2_init(void) {
 	printk("MP2 MODULE LOADING");
 	printk("MODULE INIT CALLED");
-	newentry = proc_filesystem_entries("status", "MP2");
+	newentry = proc_filesys_entries("status", "MP2");
     
 	ll_initialize_list(); 
 	printk("MP2 MODULE LOADED");
