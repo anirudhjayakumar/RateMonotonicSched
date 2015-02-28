@@ -1,5 +1,5 @@
 ## Compile Makefile for Kernel Module ##
-EXTRA_CFLAGS +=
+EXTRA_CFLAGS = -DDEBUG_OUTPUT
 APP_EXTRA_FLAGS:= -O2 -ansi -pedantic
 KERNEL_SRC:= /lib/modules/$(shell uname -r)/build
 SUBDIR= $(PWD)
@@ -8,13 +8,13 @@ RM:=rm
 
 .PHONY : clean
 
-all: clean modules my_factorial factorial test hi_priority visual
+all: clean modules my_factorial factorial test hi_priority visual process
 
 obj-m += mp2_final.o
 mp2_final-objs := linklist.o thread.o mp2.o
 
 modules:
-	$(MAKE) -C $(KERNEL_SRC) M=$(SUBDIR) modules
+	$(MAKE) -C $(KERNEL_SRC) M=$(SUBDIR)  modules
 
 process: process.c
 	$(GCC) -o $@ $^ -g -O0

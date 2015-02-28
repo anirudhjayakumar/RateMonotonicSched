@@ -106,7 +106,7 @@ void unregister(pid_t pid, char *file) {
 int main(int argc, char* argv[])
 {
 
-	char *file="/proc/mp2/status";
+	char *file="/proc/MP2/status";
 	uint32_t period=5000, computation=10;
 	pid_t pid;
 	int reg_success;
@@ -125,13 +125,13 @@ int main(int argc, char* argv[])
 
 	period = (uint32_t) atol(argv[1]);
 	computation = (uint32_t) atol(argv[2]);
-	jobs = (unsigned int) atol(argv[4]);
+	jobs = (unsigned int) atol(argv[3]);
 
 	pid=getpid();
 	myregister(pid,period,computation,file);
-
+    printf("Registration done!!\n");
 	reg_success=read_status(file);
-	
+ 	printf("reg_success:%d\n",reg_success);	
 	if(!reg_success)
 		exit(1);
     

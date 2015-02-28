@@ -11,8 +11,8 @@
 //the dispatching thread
 static struct task_struct *disp_thread;
 
-//the current running task
-extern my_process_entry *running; //defined in mp2.c
+//the current entry_curr_task task
+extern my_process_entry *entry_curr_task; //defined in mp2.c
 
 /*worker thread*/
 int thread_callback(void* data) {
@@ -31,29 +31,29 @@ int thread_callback(void* data) {
         
 
         ll_find_high_priority_task(&node);
-		//traverse the list to get process with highest priority and which is in running state
+		//traverse the list to get process with highest priority and which is in entry_curr_task state
 		/*list_for_each_entry(proc_iter,&proc_list.list,list){
-			if(proc_iter->state == READY && proc_iter->pid != running->pid){	
+			if(proc_iter->state == READY && proc_iter->pid != entry_curr_task->pid){	
 				if(proc_iter->sparam.sched_priority > node->sparam.sched_priority){
 					node = proc_iter;
 				}	
 			}
 		}*/		
 
-		//put the running task to ready state
-		if(running->state != SLEEPING)
-			running->state = READY;
-		running->sparam.sched_priority = 0;
-		sched_setscheduler(running->pid,SCHED_NORMAL,&(running->sparam));	
+		//put the entry_curr_task task to ready state
+		if(entry_curr_task->state != SLEEPING)
+			entry_curr_task->state = READY;
+		entry_curr_task->sparam.sched_priority = 0;
+		sched_setscheduler(entry_curr_task->pid,SCHED_NORMAL,&(entry_curr_task->sparam));	
 
-		//set the new task to running
+		//set the new task to entry_curr_task
 		if( !node ) 
 		{
 			node->state = RUNNING;
 			wake_up_process(node);
 			node->sparam.sched_priority = 99;
 			sched_setscheduler(node->pid,SCHED_FIFO,&(node->sparam));	//scheduling policy make a check
-			running = node;
+			entry_curr_task = node;
 		}
 	}	
 	return 0;

@@ -27,11 +27,10 @@ ulong initial_jiffies, curr_jiffies;
 /* Creating mutex lock to protect data structures when they are read or written */
 struct mutex mymutex;
 /* Pointer to the currently running task */
-my_process_entry *entry_currtask=NULL;
 procfs_entry *newproc = NULL;
 procfs_entry *newdir = NULL;
 procfs_entry *newentry = NULL;
-
+my_process_entry *entry_curr_task = NULL;
 /* 	Admission control makes sure that the new process which is trying to register can be accmodated
 	given the present utilization of the CPU. If the new utilization is less than ln 2 or 0.693, 
 	the new process gets admitted else its registration is denied.
@@ -100,6 +99,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 
 			/* Changing all commas to null terminated strings and storing them. */
 			
+			printk(KERN_INFO "Registering process\n");
 			pid_str = proc_buffer + 2;
 			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
@@ -107,6 +107,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
 			computation_str = end + 1;
+			printk(KERN_INFO "PROC_INFO:%s-%s-%s\n",pid_str,period_str,computation_str);
 			
 			/* Creating a temporary entry in kernel space to hold the new requesting process */
 			entry_temp = (my_process_entry *)kmalloc(sizeof(my_process_entry), GFP_KERNEL);
@@ -131,7 +132,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				kfree(entry_temp);
 				return -EFAULT;
 			}
-			if((ret - kstrtoul(computation_str, 10, &(entry_temp->computation))) == -1) {
+			if((ret = kstrtoul(computation_str, 10, &(entry_temp->computation))) == -1) {
 				printk(KERN_ALERT "ERROR IN COMPUTATION TO STRING CONVERSION\n");
 				kfree(proc_buffer);
 				kfree(entry_temp);
@@ -234,7 +235,7 @@ us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 				entry_temp->sparam.sched_priority = 0;
 				sched_setscheduler(entry_temp->task, SCHED_NORMAL, &(entry_temp->sparam));
 				entry_temp->state = SLEEPING;
-				entry_currtask = NULL;
+				entry_curr_task = NULL;
 			}
 
 			mutex_unlock(&mymutex);
@@ -350,13 +351,13 @@ static void remove_entry(char *procname, char *parent) {
 
 
 
-static int __mp2_init(void) {
+static int __init mp2_init(void) {
 	printk("MP2 MODULE LOADING");
 	printk("MODULE INIT CALLED");
 	newentry = proc_filesys_entries("status", "MP2");
     
 	ll_initialize_list(); 
-	thread_init();
+	//thread_init();
 	#ifdef __DEBUG__
 	curr_jiffies = jiffies;
 	printk(KERN_INFO "RMS Scheduler loaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
@@ -365,10 +366,10 @@ static int __mp2_init(void) {
 	return 0;
 }
 
-static void __exit mp1_exit(void) {
+static void __exit mp2_exit(void) {
 	printk("MP2 MODULE UNLOADING");
 	remove_entry("status", "mp2");
-	thread_cleanup();
+	//thread_cleanup();
 	ll_cleanup();
 	#ifdef __DEBUG__
 	curr_jiffies = jiffies;
@@ -376,6 +377,9 @@ static void __exit mp1_exit(void) {
 	#endif
 	printk("MP2 MODULE UNLOADED");
 }
+
+module_init(mp2_init);
+module_exit(mp2_exit);
 
 
 MODULE_LICENSE("GPL");

@@ -6,7 +6,7 @@
 #include <linux/rwsem.h>
 
 #include "linklist.h"
-extern my_process_entry *running; 
+extern my_process_entry *entry_curr_task; 
 my_process_entry proc_list;
 static int list_size = 0;
 struct rw_semaphore *sem = NULL;
@@ -53,6 +53,9 @@ int ll_remove_task(pid_t pid)
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if (proc_iter->pid == pid )
 		{
+			if(proc_iter == entry_curr_task) {
+				 entry_curr_task = NULL;
+			}
 			del_timer(&(proc_iter->mytimer));
 			list_del(&proc_iter->list);
 			kfree(proc_iter);
