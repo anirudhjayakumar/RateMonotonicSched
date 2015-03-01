@@ -86,10 +86,12 @@ void visible_test_sleep(unsigned long i) {
 /* When a process wants to yield, it will call this function */
 
 void yield(pid_t pid,char *file) {
+	printf("Entering Yield. \n");
 	FILE *fp=fopen(file,"w");
 	/* Use the key charecter 'Y' for yield */
 	fprintf(fp,"Y,%d",pid);
 	fclose(fp);
+	printf("Exiting Yield\n");
 }
 
 /* When a process is going to deregister, it will call this function */

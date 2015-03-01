@@ -109,13 +109,17 @@ int ll_cleanup(void)
 
 int ll_get_task(pid_t pid, my_process_entry **proc)
 {
+	printk(KERN_INFO, "ENTERED ll_get_task\n");
 	*proc = NULL;
 	my_process_entry *proc_iter = NULL;
+	printk(KERN_INFO, "BEFORE LOCK in ll_get_task\n");
     down_read(sem);	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
+		printk(KERN_INFO, "From ll_get_task proc_iter->pid: %d\n", proc_iter->pid);
 		if(proc_iter->pid == pid ) *proc = proc_iter;
 	}
     up_read(sem);
+	printk(KERN_INFO, "AFTER LOCK in ll_get_task\n");
 
 	return SUCCESS;
 }
