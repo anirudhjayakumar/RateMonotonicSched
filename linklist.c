@@ -87,8 +87,8 @@ int ll_find_high_priority_task(my_process_entry **proc)
 		}
 	}
     up_read(sem);
-
-	return SUCCESS;
+    if(*proc == NULL) return FAIL
+	else return SUCCESS;
 }
 
 int ll_cleanup(void)
