@@ -8,7 +8,7 @@ RM:=rm
 
 .PHONY : clean
 
-all: clean modules my_factorial factorial test hi_priority visual process
+all: clean modules process
 
 obj-m += mp2_final.o
 mp2_final-objs := linklist.o thread.o mp2.o
