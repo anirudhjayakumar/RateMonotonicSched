@@ -36,4 +36,4 @@ process: process.c
 #	$(GCC) -o $@ $^ -g -O0
 
 clean:
-	$(RM) -f my_factorial *~ *.ko *.o *.mod.c Module.symvers modules.order
+	$(RM) -f process *~ *.ko *.o *.mod.c Module.symvers modules.order

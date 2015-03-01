@@ -104,7 +104,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			end = strstr(proc_buffer + 2, ",");
 			*end = '\0';
 			period_str = end + 1;
-			end = strstr(proc_buffer + 1, ",");
+			end = strstr(end + 1, ",");
 			*end = '\0';
 			computation_str = end + 1;
 			printk(KERN_INFO "PROC_INFO:%s-%s-%s\n",pid_str,period_str,computation_str);
