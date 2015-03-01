@@ -14,7 +14,7 @@ typedef unsigned long ulong;
 
 typedef struct process_entry {
 	/* Data Structure elements */		/* Data Strcuture element explnation */
-	pid_t pid;				// Process ID
+	int pid;				// Process ID
 	ulong period;				// Period of the process
 	ulong computation;			// Computation time of process
 	ulong c;                // Question: What is this for?

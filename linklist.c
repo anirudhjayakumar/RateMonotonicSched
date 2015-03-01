@@ -95,8 +95,8 @@ ulong min_period = ULONG_MAX;
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if(proc_iter->state == READY && proc_iter->period < min_period)
 		{
-			printk(KERN_INFO "high priority: pid:%d\n", proc_iter->period); 
-        	min_period = proc_iter->period;
+			printk(KERN_INFO "high priority: pid:%d\n", proc_iter->pid); 
+        		min_period = proc_iter->period;
 			*proc = proc_iter;
 		}
 	}

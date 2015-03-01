@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <inttypes.h>
+#include <string.h>
 
 /* When the process itself is trying to register it should call myregister along with the R to make sure kernel 
 module gets the registration info */ 
@@ -32,7 +33,6 @@ int read_status(char *file) {
 	int ret, filenum, i;
 	unsigned long period, comp;	// dummy variables
 	pid_t mypid = getpid();
-	pid_t pid;
 	char buffer[512];
 	char* checker = buffer;
 	bzero(buffer, 512);
@@ -42,28 +42,24 @@ int read_status(char *file) {
 	if(fp == NULL)
 		return -1;
 		
-	//since the buffer returns nicely, make the
-	//read function return the number of process
-	//in the scheduler so we know what to parse
+	/*since the buffer returns nicely, make the
+	read function return the number of process
+	in the scheduler so we know what to parse*/
 	ret = fread(buffer,sizeof(char),500,fp);
 	fclose(fp);
 
 	printf("Address of buffer is %p\n",buffer);
 	printf("The read is: %s\n", buffer);
 	printf("Num bytes is: %d\n", ret);
-
-	//check if the process is in the list, if so return ret, else return 0
-	while(*checker != '\0' && (checker - buffer < sizeof(buffer))) {
-		sscanf(checker, "%6d,%6lu,%6lu\n", &pid, &period, &comp);
-		printf("CHECK: %d, %lu, %lu\n", pid, period, comp);
-		
-		if(pid == mypid)
-			return ret;
+	printf("PID is: %d\n", mypid);
 	
-		//size of each entry will be 28
-		checker += 21;	
+	char pid_str[10];
+	sprintf(pid_str, "%d", (int)mypid);
+	/*check if the process is in the list, if so return ret, else return 0*/
+	if(strstr(buffer, pid_str) != NULL) {
+		printf("PID found %s\n", pid_str);
+		return ret;
 	}
-
 	printf("REGISTRATION DENIED\n");	
 	return 0;
 }
@@ -131,7 +127,6 @@ int main(int argc, char* argv[])
 	myregister(pid,period,computation,file);
         printf("Registration done!!\n");
 	reg_success=read_status(file);
- 	printf("reg_success:%d\n",reg_success);	
 	if(!reg_success)
 		exit(1);
     
@@ -148,9 +143,6 @@ int main(int argc, char* argv[])
 		printf("currently running for: %ld seconds, %ld miliseconds\n", 
 			current.tv_sec - t0.tv_sec, 
 			((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000);
-
-		printf("Calculated Factorial: %lu\n", factorial(2000));
-		/* visible_test_sleep(1000000); */
 		yield(pid,file);
 	}
 
@@ -162,7 +154,7 @@ int main(int argc, char* argv[])
 		current.tv_sec - t0.tv_sec, 
 		((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000); */
 	
-	printf("Donr with Job.. Going to unregister..\n");
+	printf("Done with Job.. Going to unregister..\n");
 	unregister(pid,file);
 	return 0;
 }
