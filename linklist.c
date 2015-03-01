@@ -73,6 +73,17 @@ int ll_get_size(void)
 	return list_size;
 }
 
+int ll_print_list(void)
+{
+	my_process_entry *proc_iter = NULL;
+    down_read(sem);	
+	list_for_each_entry(proc_iter,&proc_list.list,list) {
+		printk(KERN_INFO "print: pid:%d period:%lu status:%d\n", proc_iter->pid, proc_iter->period, proc_iter->state); 
+	}
+    up_read(sem);
+    return SUCCESS;
+}
+
 int ll_find_high_priority_task(my_process_entry **proc)
 {
 	*proc = NULL;
@@ -82,12 +93,13 @@ int ll_find_high_priority_task(my_process_entry **proc)
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if(proc_iter->state == READY && proc_iter->period < min_period)
 		{
+			printk(KERN_INFO "high priority: pid:%d\n", proc_iter->period); 
         	min_period = proc_iter->period;
 			*proc = proc_iter;
 		}
 	}
     up_read(sem);
-    if(*proc == NULL) return FAIL
+    if(*proc == NULL) return FAIL;
 	else return SUCCESS;
 }
 
@@ -109,8 +121,10 @@ int ll_cleanup(void)
 
 int ll_get_task(pid_t pid, my_process_entry **proc)
 {
+	printk(KERN_INFO, "ENTERED ll_get_task\n");
 	*proc = NULL;
 	my_process_entry *proc_iter = NULL;
+	printk(KERN_INFO, "BEFORE LOCK in ll_get_task\n");
     down_read(sem);	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if(proc_iter->pid == pid ) {

@@ -17,12 +17,12 @@ extern my_process_entry *entry_curr_task; //defined in mp2.c
 /*worker thread*/
 int thread_callback(void* data) {
 	struct process_info *proc_iter = NULL;
-	
+	printk(KERN_INFO "thread_callback second half\n");
 	//to set the current task to interruptible
-	set_current_state(TASK_INTERRUPTIBLE);
+	//set_current_state(TASK_INTERRUPTIBLE);
 
 	//the call back function is executed till the thread is stopped
-	while(!kthread_should_stop){
+	while(!kthread_should_stop()){
 		printk(KERN_INFO "Inside thread worker");
 
 	
@@ -30,32 +30,32 @@ int thread_callback(void* data) {
 		my_process_entry *node = NULL;
         
 
-        ll_find_high_priority_task(&node);
-		//traverse the list to get process with highest priority and which is in entry_curr_task state
-		/*list_for_each_entry(proc_iter,&proc_list.list,list){
-			if(proc_iter->state == READY && proc_iter->pid != entry_curr_task->pid){	
-				if(proc_iter->sparam.sched_priority > node->sparam.sched_priority){
-					node = proc_iter;
-				}	
-			}
-		}*/		
 
 		//put the entry_curr_task task to ready state
-		if(entry_curr_task->state != SLEEPING)
+		if(entry_curr_task && entry_curr_task->state == RUNNING){
+		
+		    printk(KERN_INFO "workthread: update state of curr task\n");
 			entry_curr_task->state = READY;
-		entry_curr_task->sparam.sched_priority = 0;
-		sched_setscheduler(entry_curr_task->pid,SCHED_NORMAL,&(entry_curr_task->sparam));	
-
+			entry_curr_task->sparam.sched_priority = 0;
+			set_task_state(entry_curr_task->task,TASK_UNINTERRUPTIBLE);
+			sched_setscheduler(entry_curr_task->pid,SCHED_NORMAL,&(entry_curr_task->sparam));
+		}
+        ll_find_high_priority_task(&node);
 		//set the new task to entry_curr_task
-		if( !node ) 
+		if( node ) 
 		{
+			printk(KERN_INFO "high priority task found with pid=%d",node->pid);
 			node->state = RUNNING;
 			wake_up_process(node);
 			node->sparam.sched_priority = 99;
 			sched_setscheduler(node->pid,SCHED_FIFO,&(node->sparam));	//scheduling policy make a check
 			entry_curr_task = node;
 		}
-	}	
+		
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule();
+	}
+
 	return 0;
 }
 

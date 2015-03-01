@@ -1,6 +1,6 @@
 ## Compile Makefile for Kernel Module ##
-EXTRA_CFLAGS = -DDEBUG_OUTPUT -D__DEBUG__
-APP_EXTRA_FLAGS:= -O2 -ansi -pedantic
+EXTRA_CFLAGS = -DDEBUG_OUTPUT
+APP_EXTRA_FLAGS:= -O2 -ansi -pedantic -D__DEBUG__
 KERNEL_SRC:= /lib/modules/$(shell uname -r)/build
 SUBDIR= $(PWD)
 GCC:=gcc
