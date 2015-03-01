@@ -233,21 +233,24 @@ jiffies_to_usecs(curr_jiffies));
 				entry_curr_task = NULL;
 			}
 
-			mutex_unlock(&mymutex);
+			printk(KERN_INFO "PID %d is put to SLEEP.\n", entry_temp->pid);
 			/* Our real time schedulling is done. Now call Linux scheduler to schedule everything else 
 			   in the world
 			*/
 			schedule();
+			printk(KERN_INFO "EXITING YIELD from KERNEL MODULE");
 			break;
 
 		case 'D':
+			printk(KERN_INFO "ENTERING DE-REGISTRATION\n");
 			/* Check if list is empty before deregistration */
-			if(ll_get_size() == 0) {
+			/*if(ll_get_size() == 0) {
 				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
 				kfree(proc_buffer);
 				return -EFAULT;
-			}
+			}*/
 			pid_str = proc_buffer + 2;
+			printk(KERN_INFO "PID from D: %s\n", pid_str);
 			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
 				kfree(proc_buffer);
@@ -255,7 +258,7 @@ jiffies_to_usecs(curr_jiffies));
 			}
 
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", pid, jiffies_to_usecs(curr_jiffies));
 			if(ll_remove_task(pid) != SUCCESS) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
 				kfree(proc_buffer);
@@ -349,7 +352,7 @@ static int __init mp2_init(void) {
 	newentry = proc_filesys_entries("status", "MP2");
     
 	ll_initialize_list(); 
-	//thread_init();
+	thread_init();
 	curr_jiffies = jiffies;
 	printk(KERN_INFO "RMS Scheduler loaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
 	printk("MP2 MODULE LOADED");
@@ -359,7 +362,7 @@ static int __init mp2_init(void) {
 static void __exit mp2_exit(void) {
 	printk("MP2 MODULE UNLOADING");
 	remove_entry("status", "MP2");
-	//thread_cleanup();
+	thread_cleanup();
 	ll_cleanup();
 	curr_jiffies = jiffies;
 	printk(KERN_INFO "RMS Scheduler unloaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
