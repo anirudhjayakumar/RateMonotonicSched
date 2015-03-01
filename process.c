@@ -86,12 +86,10 @@ void visible_test_sleep(unsigned long i) {
 /* When a process wants to yield, it will call this function */
 
 void yield(pid_t pid,char *file) {
-	printf("Entering Yield. \n");
 	FILE *fp=fopen(file,"w");
 	/* Use the key charecter 'Y' for yield */
 	fprintf(fp,"Y,%d",pid);
 	fclose(fp);
-	printf("Exiting Yield\n");
 }
 
 /* When a process is going to deregister, it will call this function */
@@ -151,7 +149,7 @@ int main(int argc, char* argv[])
 			current.tv_sec - t0.tv_sec, 
 			((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000);
 
-		factorial(2500);
+		printf("Calculated Factorial: %lu\n", factorial(2000));
 		/* visible_test_sleep(1000000); */
 		yield(pid,file);
 	}
