@@ -86,10 +86,12 @@ int ll_print_list(void)
 
 int ll_find_high_priority_task(my_process_entry **proc)
 {
-	*proc = NULL;
+	
     my_process_entry *proc_iter = NULL;
+ulong min_period = ULONG_MAX;
+*proc = NULL;
     down_read(sem);	
-	ulong min_period = ULONG_MAX;
+	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if(proc_iter->state == READY && proc_iter->period < min_period)
 		{
@@ -121,10 +123,11 @@ int ll_cleanup(void)
 
 int ll_get_task(pid_t pid, my_process_entry **proc)
 {
-	printk(KERN_INFO, "ENTERED ll_get_task\n");
+my_process_entry *proc_iter = NULL;
+	printk(KERN_INFO "ENTERED ll_get_task\n");
 	*proc = NULL;
-	my_process_entry *proc_iter = NULL;
-	printk(KERN_INFO, "BEFORE LOCK in ll_get_task\n");
+	
+	printk(KERN_INFO  "BEFORE LOCK in ll_get_task\n");
     down_read(sem);	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
 		if(proc_iter->pid == pid ) {

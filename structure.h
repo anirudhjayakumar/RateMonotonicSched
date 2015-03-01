@@ -28,7 +28,7 @@ typedef struct process_entry {
 typedef struct proc_dir_entry procfs_entry;
 
 procfs_entry* proc_filesys_entries(char *procname, char *parent);
-static void remove_entry(char *procname, char *parent);
+
 /* Admission Control Function Declaration */
 int admission_control (my_process_entry *new_process_entry);
 /* Remove task function declaration used when a process is deregistering */

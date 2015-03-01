@@ -16,6 +16,8 @@ extern my_process_entry *entry_curr_task; //defined in mp2.c
 
 /*worker thread*/
 int thread_callback(void* data) {
+//take the first node as the one with highest priority
+		my_process_entry *node = NULL;
 	printk(KERN_INFO "thread_callback second half\n");
 	//to set the current task to interruptible
 	//set_current_state(TASK_INTERRUPTIBLE);
@@ -25,8 +27,7 @@ int thread_callback(void* data) {
 		printk(KERN_INFO "Inside thread worker");
 
 	
-		//take the first node as the one with highest priority
-		my_process_entry *node = NULL;
+		
         
 
 

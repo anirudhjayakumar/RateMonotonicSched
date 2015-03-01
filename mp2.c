@@ -30,6 +30,7 @@ procfs_entry *newproc = NULL;
 procfs_entry *newdir = NULL;
 procfs_entry *newentry = NULL;
 my_process_entry *entry_curr_task = NULL;
+static void remove_entry(char *procname, char *parent);
 
 
 
@@ -40,8 +41,8 @@ my_process_entry *entry_curr_task = NULL;
 
 int admission_control (my_process_entry *new_process_entry) {
 	ulong utilization = 0;
-	my_process_entry *entry_temp;
-	struct list_head *it, *next;
+	//my_process_entry *entry_temp;
+	//struct list_head *it, *next;
 	/* Since floating point calculation is costly, we multiply by 1000 to make it an integer */
 	utilization = (new_process_entry->computation)*1000 / (new_process_entry->period);
     utilization += ll_get_curr_utilization();
@@ -213,7 +214,7 @@ jiffies_to_usecs(curr_jiffies));
 				return -EFAULT;
 			}
 			
-			printk(KERN_INFO "ENTERED case \`Y\'\n");
+			printk(KERN_INFO "ENTERED case Y \n");
 			pid_str = proc_buffer + 2;
 			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
@@ -274,7 +275,7 @@ jiffies_to_usecs(curr_jiffies));
 
 			break;
 
-		deafult:
+		default:
 			printk(KERN_ALERT "I DONT KNOW WHAT IS HAPPENING. PANICKED :(\n");
 			kfree(proc_buffer);
 			return -EFAULT;
