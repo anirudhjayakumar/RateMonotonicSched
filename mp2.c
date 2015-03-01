@@ -165,6 +165,11 @@ jiffies_to_usecs(curr_jiffies));
 			   in the mp2_given.h file for this purpose.
 			*/
 			entry_temp->task = find_task_by_pid(entry_temp->pid);
+			if(!entry_temp->task)
+			{
+				printk(KERN_INFO "=== task retuened empty\n");
+			}
+			
 			/* Once the pointer to PCB found, initialize the timer associated with the process 
 			   See: http://www.ibm.com/developerworks/library/l-timers-list/
 			   for setup_timer details
@@ -225,11 +230,6 @@ jiffies_to_usecs(curr_jiffies));
 			printk(KERN_INFO "FROM YIELD SENT PID: %d LL_GET_TASK entry_temp->pid = %d", pid, entry_temp->pid);
 		
 			
-			/* If the process is trying to yield, put it to a UNINTERRUPTABLE SLEEP state as suggested in the 
-			   MP2 doc. Here we use Kernel scheduler to do that. 
-			   We check if the timer is pending that is the task has done with its computation and has some
-			   time quantum left before its current period expires and hence has to sleep before the next invocation
-			*/
 			if(timer_pending(&entry_temp->mytimer)) {
 				curr_jiffies = jiffies;
 				printk(KERN_INFO "RMS Scheduler putting the Process PID: %lu to sleep at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
