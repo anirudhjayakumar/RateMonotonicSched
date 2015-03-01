@@ -61,7 +61,7 @@ int read_status(char *file) {
 			return ret;
 	
 		//size of each entry will be 28
-		checker += 28;	
+		checker += 21;	
 	}
 
 	printf("REGISTRATION DENIED\n");	
