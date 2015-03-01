@@ -127,7 +127,7 @@ int ll_generate_proc_info_string(char **buf, unsigned int *size)
     *buf = (char *)kmalloc(BUF_SIZE,GFP_KERNEL);
 	down_read(sem);	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
-		count += sprintf(*buf+count,"pid=%d period=%lu processing time=%lu\n",
+		count += sprintf(*buf+count,"%d,%lu,%lu\n",
 		proc_iter->pid,proc_iter->period,proc_iter->computation);
 	}
     up_read(sem);

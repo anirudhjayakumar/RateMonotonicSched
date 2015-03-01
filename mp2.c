@@ -142,8 +142,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			/* If every conversion success print the details in the kernel log for debugging purpose */
 			#ifdef __DEBUG__
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %lu, PERIOD =  
-%lu, COMPUTATION = %lu\n at %lu us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
+			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %lu, PERIOD =  %lu, COMPUTATION = %lu\n at %lu us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
 jiffies_to_usecs(curr_jiffies));
 			#endif
 		
@@ -158,8 +157,7 @@ jiffies_to_usecs(curr_jiffies));
 			/* If we can register the process, then we have to check the time of registration */
 			#ifdef __DEBUG__
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler registering PROCESS PID = %lu REGISTERED at %lu us\n", 
-entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler registering PROCESS PID = %lu REGISTERED at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			#endif
 
 			/* We directly dont modify the process control block or PCB of the newly admitted process rather we keep a pointer 
@@ -211,8 +209,7 @@ entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			}
 			#ifdef __DEBUG__
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler get the information Process PID: %lu finished computation at 
-%lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler get the information Process PID: %lu finished computation at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			#endif
 			
 			/* Find the entry associated with the process with PID which is trying to yield */
@@ -228,8 +225,7 @@ entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			if(timer_pending(&entry_temp->mytimer)) {
 				#ifdef __DEBUG__
 				curr_jiffies = jiffies;
-				printk(KERN_INFO "RMS Scheduler putting the Process PID: %lu to sleep at %lu 
-us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+				printk(KERN_INFO "RMS Scheduler putting the Process PID: %lu to sleep at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 				#endif
 				set_task_state(entry_temp->task, TASK_UNINTERRUPTIBLE);
 				entry_temp->sparam.sched_priority = 0;
@@ -261,8 +257,7 @@ us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 
 			#ifdef __DEBUG__
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", entry_temp->pid, 
-jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 			#endif
 			if(ll_remove_task(pid) != SUCCESS) {
 				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
