@@ -11,12 +11,12 @@
 /* When the process itself is trying to register it should call myregister along with the R to make sure kernel 
 module gets the registration info */ 
 
-void myregister(pid_t pid, uint32_t period, uint32_t computation, char *file) {
+void myregister(pid_t pid, unsigned long int period, unsigned long int computation, char *file) {
 	FILE *fp=fopen(file,"w");
 	int ret;
 	/* using the key charecter 'R' for registration */
-	printf("R,pid=%d,period=%" PRIu32 ",compu=%"PRIu32"\n",pid,period,computation);
-	ret=fprintf(fp,"R,%d,%"PRIu32",%"PRIu32,pid,period,computation);
+	printf("R,pid=%d,period=%lu,compu=%lu\n",pid,period,computation);
+	ret=fprintf(fp,"R,%d,%lu,%lu",pid,period,computation);
 	fclose(fp);
 }
 
@@ -123,13 +123,13 @@ int main(int argc, char* argv[])
 		exit(0);
 	}
 
-	period = (uint32_t) atol(argv[1]);
-	computation = (uint32_t) atol(argv[2]);
-	jobs = (unsigned int) atol(argv[3]);
+	period = (unsigned long int) atol(argv[1]);
+	computation = (unsigned long int) atol(argv[2]);
+	jobs = (unsigned long int) atol(argv[3]);
 
 	pid=getpid();
 	myregister(pid,period,computation,file);
-    printf("Registration done!!\n");
+        printf("Registration done!!\n");
 	reg_success=read_status(file);
  	printf("reg_success:%d\n",reg_success);	
 	if(!reg_success)
