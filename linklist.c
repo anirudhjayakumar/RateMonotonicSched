@@ -113,11 +113,13 @@ int ll_get_task(pid_t pid, my_process_entry **proc)
 	my_process_entry *proc_iter = NULL;
     down_read(sem);	
 	list_for_each_entry(proc_iter,&proc_list.list,list) {
-		if(proc_iter->pid == pid ) *proc = proc_iter;
+		if(proc_iter->pid == pid ) {
+			*proc = proc_iter;
+		}
 	}
     up_read(sem);
-
-	return SUCCESS;
+    if (*proc == NULL) return FAIL;
+	else return SUCCESS;
 }
 
 int ll_generate_proc_info_string(char **buf, unsigned int *size)
