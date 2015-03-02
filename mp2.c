@@ -126,6 +126,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				res: Where to write the result after conversion is over
 			*/
 			if((ret = kstrtoul(pid_str, 10, &(entry_temp->pid))) == -1) { 
+
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
 				kfree(proc_buffer);
 				kfree(entry_temp);
@@ -146,12 +147,12 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 		
 			/* If every conversion success print the details in the kernel log for debugging purpose */
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %lu, PERIOD =  %lu, COMPUTATION = %lu\n at %lu us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
+			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %d, PERIOD =  %lu, COMPUTATION = %lu\n at %u us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
 jiffies_to_usecs(curr_jiffies));
 		
 			/* Call Admission Control function now to see if the new process can be registered */
 			if(admission_control(entry_temp) == -1) {
-				printk(KERN_ALERT "DENIED REGISTRATION OF PID = %lu", entry_temp->pid);
+				printk(KERN_ALERT "DENIED REGISTRATION OF PID = %d", entry_temp->pid);
 				kfree(entry_temp);
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -159,7 +160,7 @@ jiffies_to_usecs(curr_jiffies));
 		
 			/* If we can register the process, then we have to check the time of registration */
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler registering PROCESS PID = %lu REGISTERED at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler registering PROCESS PID = %d REGISTERED at %u us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 
 			/* We directly dont modify the process control block or PCB of the newly admitted process rather we keep a pointer 
 			   to the PCB of the newly admitted process as suggested in the MP doc. We use the find_task_by_pid() function provided
@@ -198,7 +199,7 @@ jiffies_to_usecs(curr_jiffies));
 			*/
 			if(ret) {
 				printk(KERN_ALERT "ERROR IN SET TIMER\n");
-				printk(KERN_ALERT "TIMER PENDING IS: %lu\n", timer_pending(&(entry_temp->mytimer)));
+				printk(KERN_ALERT "TIMER PENDING IS: %u\n", timer_pending(&(entry_temp->mytimer)));
 			}
 			entry_temp->state = SLEEPING; /* Set the process state to SLEEP and then add it to the process list */
 			
@@ -226,14 +227,14 @@ jiffies_to_usecs(curr_jiffies));
 			
 			ll_get_task(pid,&entry_temp);
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler get the information Process PID: %lu finished computation at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler get the information Process PID: %d finished computation at %u us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 
 			printk(KERN_INFO "FROM YIELD SENT PID: %d LL_GET_TASK entry_temp->pid = %d", pid, entry_temp->pid);
 		
 			
 			if(timer_pending(&entry_temp->mytimer)) {
 				curr_jiffies = jiffies;
-				printk(KERN_INFO "RMS Scheduler putting the Process PID: %lu to sleep at %lu us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
+				printk(KERN_INFO "RMS Scheduler putting the Process PID: %d to sleep at %u us\n", entry_temp->pid, jiffies_to_usecs(curr_jiffies));
 				set_task_state(entry_temp->task, TASK_UNINTERRUPTIBLE);
 				entry_temp->sparam.sched_priority = 0;
 				sched_setscheduler(entry_temp->task, SCHED_NORMAL, &(entry_temp->sparam));
@@ -266,9 +267,9 @@ jiffies_to_usecs(curr_jiffies));
 			}
 
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler removing Process PID: %lu at %lu us\n", pid, jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler removing Process PID: %d at %u us\n", pid, jiffies_to_usecs(curr_jiffies));
 			if(ll_remove_task(pid) != SUCCESS) {
-				printk(KERN_INFO "DEREGISTERING PROCESS: %lu FAILED\n", pid);
+				printk(KERN_INFO "DEREGISTERING PROCESS: %d FAILED\n", pid);
 				kfree(proc_buffer);
 				return -EFAULT;
 			}
@@ -362,7 +363,7 @@ static int __init mp2_init(void) {
 	ll_initialize_list(); 
 	thread_init();
 	curr_jiffies = jiffies;
-	printk(KERN_INFO "RMS Scheduler loaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
+	printk(KERN_INFO "RMS Scheduler loaded at %u us\n", jiffies_to_usecs(curr_jiffies));
 	printk("MP2 MODULE LOADED");
 	return 0;
 }
@@ -373,7 +374,7 @@ static void __exit mp2_exit(void) {
 	thread_cleanup();
 	ll_cleanup();
 	curr_jiffies = jiffies;
-	printk(KERN_INFO "RMS Scheduler unloaded at %lu us\n", jiffies_to_usecs(curr_jiffies));
+	printk(KERN_INFO "RMS Scheduler unloaded at %u us\n", jiffies_to_usecs(curr_jiffies));
 	printk("MP2 MODULE UNLOADED");
 }
 
