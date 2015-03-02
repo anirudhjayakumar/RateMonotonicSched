@@ -30,11 +30,10 @@ void myregister(pid_t pid, unsigned long int period, unsigned long int computati
  */
 
 int read_status(char *file) {
-	int ret, filenum, i;
-	unsigned long period, comp;	// dummy variables
 	pid_t mypid = getpid();
+	char pid_str[10];
 	char buffer[512];
-	char* checker = buffer;
+	int ret;
 	bzero(buffer, 512);
 
 	FILE *fp = fopen(file, "r");
@@ -48,16 +47,14 @@ int read_status(char *file) {
 	ret = fread(buffer,sizeof(char),500,fp);
 	fclose(fp);
 
-	printf("Address of buffer is %p\n",buffer);
-	printf("The read is: %s\n", buffer);
-	printf("Num bytes is: %d\n", ret);
-	printf("PID is: %d\n", mypid);
+	printf("Address of read buffer is %p\n",buffer);
+	printf("Num of bytes read from buffer is: %d\n", ret);
+	printf("PID from getpid() is: %d\n", mypid);
 	
-	char pid_str[10];
 	sprintf(pid_str, "%d", (int)mypid);
 	/*check if the process is in the list, if so return ret, else return 0*/
 	if(strstr(buffer, pid_str) != NULL) {
-		printf("PID found %s\n", pid_str);
+		printf("PID found n /proc/MP2/status %s\n and hence this process is registered.", pid_str);
 		return ret;
 	}
 	printf("REGISTRATION DENIED\n");	
@@ -103,13 +100,14 @@ int main(int argc, char* argv[])
 {
 
 	char *file="/proc/MP2/status";
-	uint32_t period=5000, computation=10;
+	uint32_t period=0, computation=0;
 	pid_t pid;
 	int reg_success;
-	unsigned long i, jobs;
+	unsigned long jobs;
+	int i;
 	unsigned int ret;
 	char buf[1000];
-	struct timeval t0, current;
+	struct timeval t0, start, end;
 
 	printf("The number of arguments: %d\n", argc);
 
@@ -124,25 +122,30 @@ int main(int argc, char* argv[])
 	jobs = (unsigned long int) atol(argv[3]);
 
 	pid=getpid();
+	/* process is trying to register */
 	myregister(pid,period,computation,file);
-        printf("Registration done!!\n");
+        printf("Checking if registration is successful!!\n");
 	reg_success=read_status(file);
-	if(!reg_success)
+	gettimeofday(&t0, NULL);
+	if(!reg_success){
 		exit(1);
+	}
+	else {
+		printf("Registration done successful. PID found in status file at %ld seconds. \n", t0.tv_sec);
+	}
     
 	/* get the time of day */
-	gettimeofday(&t0, NULL);
-
+	
 	yield(pid,file);
 	for(i=0;i<jobs;i++){
 
-		printf("\npid %d running %lu times\n",pid,i);
-		/* get the time of day
-		yield(pid,file); */
-		gettimeofday(&current, NULL);
-		printf("currently running for: %ld seconds, %ld miliseconds\n", 
-			current.tv_sec - t0.tv_sec, 
-			((current.tv_usec%1000000) - (t0.tv_usec%1000000))/1000);
+		printf("\npid %d running %d times\n",pid,i);
+		/* get the time of starting the job*/
+		gettimeofday(&start, NULL);
+		factorial(20000);
+		/* get the time of ending the job*/
+		gettimeofday(&end, NULL);
+		printf("Job %d started at: %ld useconds and finished at %ld useconds\n", i, start.tv_usec, end.tv_usec);
 		yield(pid,file);
 	}
 

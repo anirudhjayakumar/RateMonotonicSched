@@ -24,14 +24,12 @@
 #include "thread.h"
 // global variables
 ulong initial_jiffies, curr_jiffies;
-/* Creating mutex lock to protect data structures when they are read or written */
 /* Pointer to the currently running task */
 procfs_entry *newproc = NULL;
 procfs_entry *newdir = NULL;
 procfs_entry *newentry = NULL;
 my_process_entry *entry_curr_task = NULL;
 static void remove_entry(char *procname, char *parent);
-
 
 
 /* 	Admission control makes sure that the new process which is trying to register can be accmodated
@@ -41,18 +39,9 @@ static void remove_entry(char *procname, char *parent);
 
 int admission_control (my_process_entry *new_process_entry) {
 	ulong utilization = 0;
-	//my_process_entry *entry_temp;
-	//struct list_head *it, *next;
 	/* Since floating point calculation is costly, we multiply by 1000 to make it an integer */
 	utilization = (new_process_entry->computation)*1000 / (new_process_entry->period);
-    utilization += ll_get_curr_utilization();
-    
-
-	   // remove below:
-	/*list_for_each_safe(it, next, &mylist) {
-		entry_temp = list_entry(it, my_process_entry, mynode);
-		utilization = utilization + (entry_temp->computation)*1000/ (entry_temp->period);
-	}*/
+	utilization += ll_get_curr_utilization();
 	printk(KERN_INFO "Utilization Sum: %lu", utilization);
 	if(utilization <= 693) {
 		return 0;
@@ -69,7 +58,7 @@ int admission_control (my_process_entry *new_process_entry) {
 
 void mytimer_callback(ulong data) 
 {
-    my_process_entry *proc_entry = (my_process_entry*)data;
+	my_process_entry *proc_entry = (my_process_entry*)data;
 	// set the process to READY state
 	proc_entry->state = READY;
 	// wake up the dispatch thread 
@@ -147,8 +136,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 		
 			/* If every conversion success print the details in the kernel log for debugging purpose */
 			curr_jiffies = jiffies;
-			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %d, PERIOD =  %lu, COMPUTATION = %lu\n at %u us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, 
-jiffies_to_usecs(curr_jiffies));
+			printk(KERN_INFO "RMS Scheduler receiving request from Process PID = %d, PERIOD =  %lu, COMPUTATION = %lu\n at %u us\n", entry_temp->pid, entry_temp->period, entry_temp->computation, jiffies_to_usecs(curr_jiffies));
 		
 			/* Call Admission Control function now to see if the new process can be registered */
 			if(admission_control(entry_temp) == -1) {
@@ -177,7 +165,7 @@ jiffies_to_usecs(curr_jiffies));
 			   for setup_timer details
 			*/
 
-            init_timer(&(entry_temp->mytimer));
+		        init_timer(&(entry_temp->mytimer));
 			entry_temp->mytimer.expires = jiffies + msecs_to_jiffies(entry_temp->period);
 			entry_temp->mytimer.data = (ulong)entry_temp;
 			entry_temp->mytimer.function = mytimer_callback;
@@ -185,18 +173,22 @@ jiffies_to_usecs(curr_jiffies));
 
 			//setup_timer(&(entry_temp->mytimer), &mytimer_callback, (ulong)entry_temp); 
 			//casting pointer to ulong is a safe operation refer:http://www.makelinux.net/ldd3/chp-7-sect-4
+	
 			/* With an initialized timer, the user now needs to set the expiration time, which is done through a 
 			   call to mod_timer. As users commonly provide an expiration in the future, 
 			   they typically add jiffies here to offset from the current time.
 			   See: http://www.ibm.com/developerworks/library/l-timers-list/
 			   for mod_timer_details
 			*/
+
 			//ret = mod_timer(&(entry_temp->mytimer), jiffies + msecs_to_jiffies(entry_temp->period - entry_temp->computation));
+			
 			/* Finally, users can determine whether the timer is pending (yet to fire) through a 
 			   call to timer_pending (1 is returned if the timer is pending):
 			   See: http://www.ibm.com/developerworks/library/l-timers-list/
 			   for timer_pending details
 			*/
+		
 			if(ret) {
 				printk(KERN_ALERT "ERROR IN SET TIMER\n");
 				printk(KERN_ALERT "TIMER PENDING IS: %u\n", timer_pending(&(entry_temp->mytimer)));
@@ -253,11 +245,11 @@ jiffies_to_usecs(curr_jiffies));
 		case 'D':
 			printk(KERN_INFO "ENTERING DE-REGISTRATION\n");
 			/* Check if list is empty before deregistration */
-			/*if(ll_get_size() == 0) {
+			if(ll_get_size() == 0) {
 				printk(KERN_ALERT "PROCESS LIST IS EMPTY\n");
 				kfree(proc_buffer);
 				return -EFAULT;
-			}*/
+			}
 			pid_str = proc_buffer + 2;
 			printk(KERN_INFO "PID from D: %s\n", pid_str);
 			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
