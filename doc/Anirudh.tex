@@ -1,0 +1,20 @@
+\subsection{Functionalities of Linklist}\label{subsec:Link}
+
+The process structure of the registered processes are stored in a linklist. A set of interface methods provide read and write access to the linklist. These function are declared in linklist.h header file. These methods are used by the proc read/write module and the dispatch thread. The list of interfaces and their functionalities are explained in the Table~\ref{table:linkfunc}. 
+
+\begin{table*}[h]
+  \centering
+  \rcow
+  \caption{List of functions to access the linklist\label{table:linkfunc}}
+  \begin{tabular}{|p{7cm}|p{8cm}|}
+    {\tt int ll\_initialize\_list(void)}  &  Initializes the linklist and should be called before calling any other linklist function. Ideally, this should be called from the kernel module init function.  \\
+    {\tt int ll\_add\_task(my\_process\_entry *proc)}     &  Adds a process\_entry structure instance to the list.  \\
+    {\tt int ll\_generate\_proc\_info\_string(char **buf, unsigned int *size)}&  Generates a string with all the currently registered processes and their period and computation time.\\
+    {\tt int ll\_cleanup(void);}  & Frees all memory created during initialize. Should be called from module\_exit function  \\
+    {\tt int ll\_remove\_task(pid\_t pid)}    & removes the process structure from the list and then delete it\\
+    {\tt int ll\_get\_size(void);}    & Returns the size of the list \\
+    {\tt int ll\_find\_high\_priority\_task(my\_process\_entry **proc)}    &  return the task which is in READY state and having the least period\\
+    {\tt int ll\_get\_task(pid\_t pid, my\_process\_entry **proc)}  &  return the process structure with process id equal to pid\\
+  \end{tabular}
+\end{table*}
+

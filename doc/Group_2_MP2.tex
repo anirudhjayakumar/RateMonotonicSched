@@ -1,0 +1,144 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{verbatim}
+\usepackage{alltt}
+\usepackage{fancyvrb}
+\usepackage[svgnames,xcdraw,table]{xcolor}
+\usepackage{multirow}
+\usepackage{xnewcommand}
+\usepackage{longtable}
+\usepackage[font=small,skip=1pt]{caption}
+\usepackage{subcaption, balance, appendix}
+\usepackage{geometry, setspace, fullpage}
+\usepackage{epstopdf}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage{alltt}
+
+
+\begin{document}
+
+\newcommand[\global]{\rcow}{\rowcolors[\hline]{1}{gray!10}{Snow}\arrayrulecolor{Black}\setlength\arrayrulewidth{1pt}}
+
+\title{CS423 : MP2 Documentation}
+\author{{\bf Group 2}: Debjit Pal (dpal2), Anirudh Jayakumar (ajayaku2), Neha Chaube (nchaub2) \\ and Divya Balakrishna (dbalakr2)}
+\date{\today}
+
+\maketitle
+
+\section{Introduction}
+We describe the important data structures and the functionalities of the functions we created to build up {\em Rate Monotonic Scheduler} (RMS). We used a multi-file approach to keep the modularity of the design and to make sure that all the group members can work in parallel without harming others' code. Hence we changed the {\tt Makefile} provided in MP1. In Section~\ref{subsec:Files}, we enlist the different files relevant to this work, in Section~\ref{subsec:Make}, we describe the changes that we made in the {\tt Makefile}. In Section~\ref{subsec:pcb} we demonstrate the augmented process control block (PCB) that we created for this project. Section~\ref{subsec:Proc}, we demonstrate the creation of {\tt proc} file system, the APIs to {\tt read} from and {\tt write} into the {\tt proc} filesystem. In this section we also demonstrate the usage of the {\tt procfile\_write} call back for process {\em registration, de-registration} and {\em yield}. In Section~\ref{subsec:admission} we demonstrate the {\tt admission\_control} procedure which in turn used by the {\tt procfile\_write} function to check if a new process can be admitted without violating deadlines of any already registered process. In this section we also describe {\tt remove\_task} which removes the task from the linked list when it is done with its computation. In Section~\ref{subsec:Link} we describe the functions that are needed to handle linklists in the Kernel. Section~\ref{subsec:dispatch} demonstrates the working of the dispatching thread and enlists the necessary functions we wrote. Section~\ref{sec:toRun} demonstrates step-by-step running procedure of the RMS module and the application. Section~\ref{sec:Conclude} concludes the documents along with our learnings and the steps we took to debug the code.
+
+%% This part needs to be written after I receive Aniruddhs, Neha, Divya's writing 
+
+\subsection{Files included in the MP2 Project}\label{subsec:Files}
+
+The list of the included files for this MP is given in Table~\ref{table:filelist}.
+
+\begin{table*}[h]
+  \centering
+  \rcow
+  \caption{File list included in the project\label{table:filelist}}
+  \begin{tabular}{|p{4cm}|p{8cm}|}
+    {\tt Makefile}  &  To build up the Kernel module and user application called {\em my\_factorial}  \\
+    {\tt structure.h} & Defining the augmented process control block, the functions and the other data types and data structures relevant to this project\\
+    {\tt mp2.c}     &  Includes the kernel init and exit modules, proc file creation, proc file read and write function, admission control  \\
+    {\tt linklist.h} & Declares all interface functions to read and write into the linklist\\
+    {\tt linklist.c} & Definitions of all the interface functions to read and write in the linked list \\
+    {\tt thread.c}  & Implements the dispatcher thread \\
+    {\tt thread.h}  & Contains the function declarations for the dispatcher thread implementation \\
+    {\tt process.c} & Implementation of the parametrized factorial user application \\
+  \end{tabular}
+\end{table*}
+
+\subsection{Important Changes in Makefile}\label{subsec:Make}
+
+We took a multi-file approach to make sure each of the group member can work on different parts of the implementation, we modified the given {\tt Makefile} from MP1 in the following way:
+
+\begin{verbatim}
+ obj-m += mp2_final.o
+ mp2_final-objs := linklist.o thread.o mp2.o
+\end{verbatim}
+
+The name of the object module has been changed to {\tt mp2\_final.o} as mentioned in the {\tt obj-m}. That {\tt mp2\_final.o} contains three different object modules as mentioned in the {\tt mp2\_final-objs}. The {\em ordering} of the object module is important here because mp2.o contains a call to a dispatch thread function that is defined in thread.o. Hence, thread.c needs to be compiled before else gcc will give a compiler error message {\tt
+"implicit function declaration found"}. Further, mp2.c contains the {\tt MODULE\_LICENSE} declaration and hence it needs to be compiled at the very end after all other C files are compiled else gcc will pop an error message {\tt MODULE\_LICENSE declaration not found}. If we load such a kernel module without {\tt MODULE\_LICENSE} definition, the kernel will get {\em tainted} and may crash. In our project, the name of the kernel module is {\tt mp2\_final.ko} which we load in the kernel using {\em insmod} command.
+
+\nopagebreak
+\input{Debjit}
+\input{Anirudh}
+
+%\include{Neha}
+\input{Divya}
+
+\section{User Application}
+
+We implemented an user application which is called {\tt process} and built whenever the kernel module is built using the {\tt Makefile}.  The application takes three parameters namely
+\begin{enumerate}
+	\item Period
+	\item Computation time
+	\item Number of jobs
+\end{enumerate}
+A typical invocation of the process looks like:
+
+\[\underbrace{./process}~~\underbrace{1000}_{\text{period}}~~\underbrace{100}_{\text{computation}} ~~\underbrace{100}_{\text{number of jobs}}\]
+
+The process implements the following functions as shown in Table~\ref{table:process}.
+
+\begin{table*}[h]
+	\centering
+	\rcow
+	\caption{List of functions implemented in the user application named {\tt process}\label{table:process}}
+	\begin{tabular}{|p{7.5cm}|p{8cm}|}
+		{\tt void myregister(pid\_t pid, unsigned long int period, unsigned long int computation, char *file);}  &  Registers the process in the proc file system with the user specified parameters.  \\
+		{\tt int read\_status(char *file);}     & Read the status of the registration of the process from proc file system. If successfully registered returns size of the proc size buffer read else returns {\tt 0}  \\
+		{\tt unsigned long factorial(unsigned long i);}&  Calculates factorial of a pre-specified number\\
+		{\tt void yield(pid\_t pid,char *file);}&  Sends request for yield\\
+		{\tt void unregister(pid\_t pid, char *file) ;}  & When the process is complete with user specified number of jobs, this functions request for de-registration through the proc file system \\
+	\end{tabular}
+\end{table*}
+
+\section{How to run the program}\label{sec:toRun}
+
+Please use the following steps to compile, insert and remove the kernel module and to run our application {\em my\_factorial } program.
+
+\begin{enumerate}
+	\item To compile the kernel module and the user application:
+	\begin{verbatim}
+	# make
+	\end{verbatim}
+	This will create {\tt mp2\_final.ko} kernel object module and the user application {\em my\_factorial}.
+	\item To insert the kernel module:
+	\begin{verbatim}
+	# sudo insmod mp2_final.ko
+	\end{verbatim}
+	This should print a few confirmation messages in the {\bf /var/log/kern.log} file confirming that the kernel module has been loaded successfully.
+	\item To run the user application:
+	\begin{verbatim}
+	# ./process 10 500 100 (./process <period> <computation> <number of jobs>)
+	\end{verbatim}
+	\item To output the CPU time of the running processes in konsole:
+	\begin{verbatim}
+	# cat /proc/mp2/status
+	\end{verbatim}
+	\item To unload the kernel module:
+	\begin{verbatim}
+	# sudo rmmod mp2_final
+	\end{verbatim}
+	This will print a few confirmation messages in the {\bf /var/log/kern.log} file confirming that the kernel module has been unloaded successfully.
+\end{enumerate}
+
+
+\section{Conclusion}\label{sec:Conclude}
+
+In this MP we implement a kernel module performing real time scheduling following the principle of Rate Monotonic Scheduler. We also implement a test application to test the kernel module. In this MP we learnt
+\begin{enumerate}
+	\item To use the real time priorities
+	\item Use of dispatching thread for context switch implementation, to send the process from the READY to RUNNING and SLEEPING states.
+	\item We learnt the usage of the timer.
+\end{enumerate}
+
+
+\end{document} 

@@ -1,0 +1,22 @@
+\subsection{Implementing dispatching thread}\label{subsec:dispatch}
+
+kthreads of LINUX is used to implement the dispatching thread. This forms the bottom half for pre-emption and scheduling of user process. As soon as the timer wakes up the dispatching thread, the list containing all the processes is traversed to fetch the process with highest priority and which is in READY state. There are two possibilities of the current state:
+1.If the current task is in RUNNING state, the state is changed to READY state and the priority is set to 0. The task is scheduled using sched\_setscheduler()with SCHED\_NORMAL parameter.
+2. If there is no current task, the new task fetched from the list is set to RUNNING state, it's priority is set to 99 and the process is scheduled with SCHED\_FIFO policy.
+A summary of the implemented functions are given in the Table~\ref{table:Dispatching_thread}.
+
+\begin{table*}[h]
+  \centering
+  \rcow
+  \caption{List of functions to initialize and cleanup Dispatching thread\label{table:Dispatching_thread}}
+  \begin{tabular}{|p{7.5cm}|p{8cm}|}
+    {\tt int thread\_init(void);}  &  Initialize the thread using kthread\_create() \\
+    {\tt thread\_callback(void* data);} &     Implement worker thread to pre-empt and schedule the task  \\
+    {\tt ll\_find\_high\_priority\_task(\&node);} & used to traverse the list to fetch process with highest priority\\
+    {\tt int wake\_thread(void)}&  used to wake up the dispatching thread \\
+    {\tt void thread\_cleanup(void)} & used to stop the dispatching thread  \\
+  \end{tabular}
+\end{table*}
+
+
+%\textcolor{MidnightBlue}{Please give appropriate name of the Section and please follow the same details as we gave in MP1. I would suggest you to write in the latex format as that will help you later as well. A good source of latex info is available at the following link: \url{http://en.wikibooks.org/wiki/LaTeX/Introduction}. Do not worry about the latex compilation error as you may not be able to compile it at your end.} 

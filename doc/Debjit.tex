@@ -1,0 +1,59 @@
+
+\subsection{Process Control Block}\label{subsec:pcb}
+
+As per the MP documentation, we did not modify the process control block (PCB) of Linux directly. Rather we augment it by creating our own PCB data structure that points to the corresponding PCB of each task. We added a pointer of type {\tt struct task\_struct} and indexed the augmented PCB by the process ID or PID. The structure that we defined is shown in Figure~\ref{fig:PCB}.
+
+\begin{figure}[h]
+	\begin{alltt}
+		typedef struct process\_entry \{
+			\qquad pid\_t pid;		
+			\qquad ulong period;	
+			\qquad ulong computation;
+			\qquad ulong c;
+			\qquad enum state states;	
+			\qquad struct sched\_param sparam;
+			\qquad struct timer\_list mytimer;
+			\qquad struct task\_struct *task;
+			\qquad list\_node mynode;
+		\} my\_process\_entry;
+	\end{alltt}
+	\caption{Augmented Process Control Block Structure\label{fig:PCB}}
+\end{figure}
+
+The augmented process control block stores the {\tt period} and the {\tt computation} time in miliseconds (ms). On a new process being admitted through the {\tt admission\_control}, the parameter values supplied by the process are copied to this structure member variables. We also annotate the current state of operation of the process using a {\tt enum} of type {\tt state} defined in {\tt structure.h}. We also include a {\tt struct sched\_param} strcuture which will store the {\tt real-time priority value} of the corresponding process.The {\tt mytimer} of type {\tt struct timer\_list} is the associated {\tt wakeup timer} for the process. The pointer {\tt task} of type {\tt struct task\_struct} points to the Linux PCB of the corresponding task. {\tt list\_node} keeps track of the process in the linked list.
+
+\subsection{Proc file system creation, process registration, de-registration and yield}\label{subsec:Proc}
+
+The kernel module {\tt mp2\_final.ko} on being loaded into the kernel, the {\tt \_\_init} functions creates the {\bf proc} file system using {\bf proc\_filesystem\_entries} function. {\bf proc\_filesystem\_entries} first creates a directory called {\bf mp2} under the {\bf /proc} filesystem using {bf proc\_mkdir()} and then it uses {\bf proc\_create()} to create the status file {\bf status} at the location {\bf /proc/mp2} with a {\bf 0666} permission so the user application can read and write at the status file. The {\bf /proc/mp2/status} has an associated {\tt read} and {\tt write} function namely {\bf procfile\_read} and {\bf procfile\_write} respectively. Both of them are defined using {\bf file\_operations} structure.
+
+The {\bf procfile\_write} is one of the main function of this RMS kernel module. The {\bf procfile\_write} first copies the data from user space to kernel space using{\tt copy\_from\_user())}. As suggested in the MP2 documentation guideline, we will check the first character of the data and will know whether the process is calling for {\tt registration, de-registration} or to {\tt yield}. For the registration, the function {\tt admission\_control()}
+is called (described in Section~\ref{subsec:admission}) to check whether the new process can be registered or its request will be denied. If the admissibility test passes, then an object of type {\tt my\_process\_entry} is created to store the parameters of the new process, with the associated timers being set up using {\tt init\_timer()}. The object is then appended at the end of the linked list. For yield, some parameters
+are updated and the process is put into the {\tt SLEEP} (with a {\tt TASK\_UNINRERRUPTIBLE} parameter)) by triggering a context switch using {\tt sched\_scheduler()}. For de-registration, we find the object of type {\tt my\_process\_entry} associated with the process and remove it from the linked list and also free the data structures that was dynamically allocated during the time of registration. For this, we use a {\tt remove\_task()} function which uses {\tt del\_timer()} to delete the timer associated with the process and then uses {\tt list\_del()} to remove the process from the linked list.
+
+The {\bf procfile\_read} needs a tricky implementation. The function should be aware about the fact that it has read the proc file system buffer completely and no more data is left to be transferred to user space application. Otherwise user space application (for example "cat /proc/mp2/status"command) would output the content of the {\bf /proc/mp2/status} indefinitely. We use {\bf copy\_to\_user()} to copy data from proc filesystem buffer
+to user space buffer. When {\bf cat /proc/mp2/status} is executed in user space, {\bf procfile\_read} outputs the {\tt PID, Period} and the {\tt Computation Time} of the currently registered processes. 
+
+On kernel module being unloaded from the kernel, {\tt \_\_exit} function is called. This function calls {\bf remove\_entry} to remove proc file system entries using {\bf remove\_proc\_entry()}. The {\tt \_\_exit} also cleans up workerthread and the linked list. A summary of the implemented functions are given in the Table~\ref{table:Proc}.
+
+\begin{table*}[h]
+  \centering
+  \rcow
+  \caption{List of functions to insert and remove kernel module, read and write proc file system, process registration,
+de-registration and process yield\label{table:Proc}}
+  \begin{tabular}{|p{7.5cm}|p{8cm}|}
+    {\tt static int \_\_init mp2\_init(void);}  &  Initializing the kernel module, initialize linkedlist and initialize timer.  \\
+    {\tt procfs\_entry* proc\_filesys\_entries(char *procname, char *parent);}     &  Creates the {\bf mp2} directory in {\bf /proc} and the status
+file in {\bf /proc/mp2}  \\
+    {\tt static ssize\_t procfile\_read (struct file *file, char \_\_user *buffer, size\_t count, loff\_t *data);}&  Used to read data from kernel
+space to user space\\
+    {\tt static ssize\_t procfile\_write(struct file *file, const char \_\_user *buffer, size\_t count, loff\_t *data);}&  Used to read data from user
+space to kernel space\\
+    {\tt static void remove\_entry(char *procname, char *parent);}  & Removes the status file, the {\bf mp2} directory from {\bf proc} filesystem, removes the worker thread and the linkedlist \\
+    {\tt int admisson\_control(my\_process\_entry *new\_process\_entry);} &  Decides whether the new process can be admitted or denied registration \\
+    {\tt int remove\_task(pid\_t pid)} & Removes the task specified by the PID from the linked list
+  \end{tabular}
+\end{table*}
+
+\subsection{Admission Control Implementation}\label{subsec:admission}
+
+The admission control function {\tt admission\_control} traverses the linked list and evaluates the sum of the {\em utilization ratio} of the new process requesting registration and currently registered processes i.e. $\mathcal{U} = \displaystyle\sum_{i = 1}^{n}u_i =  \displaystyle\sum_{i = 1}^{n}\frac{c_i}{p_i}$ where $c_i$ is the computation time, $p_i$ is the period of the process and $n$ is the sum total of the number of processes that are already registered plus the new process. To avoid any {\em floating point calculation}, we calculate the {\em utilization ratio} by multiplying each $c_i$ by 1000 and then dividing by $p_i$. The {\tt admission\_control} function checks whether $\mathcal{U} \leq 693$ and admits if the predicate is true else denies the registration of the new process.
