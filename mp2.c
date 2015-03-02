@@ -114,7 +114,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 				base:  The number base to use
 				res: Where to write the result after conversion is over
 			*/
-			if((ret = kstrtoul(pid_str, 10, &(entry_temp->pid))) == -1) { 
+			if((ret = kstrtoint(pid_str, 10,&(entry_temp->pid))) == -1) { 
 
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
 				kfree(proc_buffer);
@@ -209,7 +209,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			
 			printk(KERN_INFO "ENTERED case Y \n");
 			pid_str = proc_buffer + 2;
-			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
+			if((ret = kstrtoint(pid_str, 10, &pid)) == -1) {
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
 				kfree(proc_buffer);
 				return -EFAULT;
@@ -252,7 +252,7 @@ static ssize_t procfile_write(struct file *file, const char __user *buffer, size
 			}
 			pid_str = proc_buffer + 2;
 			printk(KERN_INFO "PID from D: %s\n", pid_str);
-			if((ret = kstrtoul(pid_str, 10, &pid)) == -1) {
+			if((ret = kstrtoint(pid_str, 10, &pid)) == -1) {
 				printk(KERN_ALERT "ERROR IN PID TO STRING CONVERSION\n");
 				kfree(proc_buffer);
 				return -EFAULT;
